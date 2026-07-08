@@ -94,6 +94,8 @@ const PRIMARY_MAP = {
 // Merchant-level overrides applied before PFC mapping. Order matters —
 // first match wins (Whole Foods must precede the generic Amazon rule).
 const MERCHANT_RULES = [
+  // Card-payment descriptors (Chase "Payment Thank You-Mobile/Web", autopay)
+  { match: /payment\s*thank\s*you|thank\s*you[\s-]*(mobile|web)|autopay\s*pmt|automatic payment/i, to: ['Transfer', 'Card payment'] },
   { match: /melio/i, to: ['Housing', 'Rent — via Melio'] },
   { match: /plastiq/i, to: ['Housing', 'Rent — via Plastiq'] },
   { match: /delta air|delta.com/i, to: ['Travel', 'Flights'] },
