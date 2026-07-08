@@ -76,7 +76,7 @@ export function Rewards() {
   if (rewards.status === 'loading' || !rewards.data) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 22 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 22 }}>
           <Sk h={180} style={{ borderRadius: 22 }} />
           <Sk h={180} style={{ borderRadius: 22 }} />
         </div>
@@ -90,7 +90,7 @@ export function Rewards() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 22 }}>
         {/* Delta Medallion status card — fixed dark gradient */}
         <div
           style={{
@@ -161,7 +161,7 @@ export function Rewards() {
         ))}
       </Panel>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 22 }}>
         {/* Points earned this month (calculated live from Plaid spend) */}
         <Panel style={{ padding: '24px 26px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>

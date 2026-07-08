@@ -104,7 +104,7 @@ export function Overview() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       {/* ---- Hero row ---- */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 22 }}>
         {/* Net cash card */}
         <Panel style={{ padding: '28px 30px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
@@ -238,7 +238,7 @@ export function Overview() {
       </div>
 
       {/* ---- Intelligence + top categories ---- */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 22 }}>
         <div
           style={{
             background: 'linear-gradient(155deg,var(--surface),var(--surface-2))',

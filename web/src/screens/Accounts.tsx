@@ -13,7 +13,7 @@ export function Accounts() {
 
   if (accounts.status === 'loading') {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(340px,1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,340px),1fr))', gap: 20 }}>
         {[1, 2, 3, 4, 5, 6].map((i) => <Sk key={i} h={200} style={{ borderRadius: 22 }} />)}
       </div>
     );
@@ -39,7 +39,7 @@ export function Accounts() {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(340px,1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,340px),1fr))', gap: 20 }}>
         {accounts.data.map((a) => {
           const isCard = a.type === 'credit';
           const bal = isCard ? -(a.current_balance ?? 0) : (a.available_balance ?? a.current_balance ?? 0);
@@ -59,7 +59,7 @@ export function Accounts() {
                 display: 'flex', flexDirection: 'column', gap: 16,
               }}
             >
-              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
                 <CardTile
                   tier={a.tier}
                   height={112}
@@ -67,18 +67,18 @@ export function Accounts() {
                   small
                   issuer={a.tier === 'other' ? a.institution_name : undefined}
                 />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em' }}>{a.name}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>
+                <div style={{ flex: 1, minWidth: 150 }}>
+                  <div style={{ fontSize: 'clamp(13.5px,1.4vw,15px)', fontWeight: 600, letterSpacing: '-0.01em', overflowWrap: 'anywhere' }}>{a.name}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2, whiteSpace: 'nowrap' }}>
                     {a.subtype ? a.subtype.charAt(0).toUpperCase() + a.subtype.slice(1) : a.type}
                     {a.mask ? <> · •••• {a.mask}</> : null}
                   </div>
-                  <div className="num" style={{ fontSize: 22, fontWeight: 660, letterSpacing: '-0.02em', marginTop: 8 }}>
+                  <div className="num" style={{ fontSize: 'clamp(18px,2vw,22px)', fontWeight: 660, letterSpacing: '-0.02em', marginTop: 8, whiteSpace: 'nowrap' }}>
                     {money(bal)}
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid var(--hairline-2)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid var(--hairline-2)', flexWrap: 'wrap', gap: 10 }}>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                     {isCard ? 'Balance owed' : 'Available'}
