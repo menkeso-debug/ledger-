@@ -152,7 +152,7 @@ export function Insights() {
           <Markdown text={briefing.data.content} />
         </Panel>
       )}
-      {briefing.status === 'empty' && insights.status === 'ready' && (
+      {briefing.status === 'empty' && (
         <Panel style={{ borderRadius: 18, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ fontSize: 14, color: 'var(--text-2)' }}>
             No briefing yet — it runs every morning, or generate one now.
