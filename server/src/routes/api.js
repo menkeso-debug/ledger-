@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db/pool.js';
 import { config } from '../config.js';
+import { suggestBudgets } from '../advisor/budgets.js';
 import {
   categoryMoM, subcategoryMoM, netCashFlow, dailySpendSeries,
   accountSparkSeries, cardBalances, cashflowProjection,
@@ -27,6 +28,8 @@ apiRouter.get('/overview', async (_req, res, next) => {
 
     const checking = accounts.filter((a) => a.type === 'depository');
     const netCash = checking.reduce((s, a) => s + (a.available_balance ?? a.current_balance ?? 0), 0);
+    const { rows: budgetSum } = await q('SELECT COALESCE(SUM(monthly_budget), 0)::float AS total FROM budgets');
+    const totalBudget = budgetSum[0].total > 0 ? budgetSum[0].total : config.monthlyBudget;
     const spent = mom
       .filter((c) => !['Income', 'Transfer'].includes(c.category))
       .reduce((s, c) => s + c.current_spend, 0);
@@ -42,7 +45,7 @@ apiRouter.get('/overview', async (_req, res, next) => {
       netCashChange: { amount: flow.net, pct: netCash - flow.net > 0 ? +((flow.net / (netCash - flow.net)) * 100).toFixed(1) : null },
       cardBalancesOwed: owed,
       statementsDue: owed, // Plaid Transactions doesn't expose statement due dates; total owed shown
-      spent: { total: spent, budget: config.monthlyBudget },
+      spent: { total: spent, budget: totalBudget },
       spendSeries: series,
       topCategories: topCats.map((c) => ({ ...c, pct: Math.round((c.spend / maxCat) * 100) })),
       heroInsight: insight,
@@ -119,6 +122,61 @@ apiRouter.get('/categories', async (_req, res, next) => {
       });
     }
     res.json(out);
+  } catch (err) { next(err); }
+});
+
+// --- Budgets -------------------------------------------------------------------
+
+apiRouter.get('/budgets', async (_req, res, next) => {
+  try {
+    const { rows } = await q('SELECT category, monthly_budget::float AS monthly_budget FROM budgets ORDER BY category');
+    res.json(rows);
+  } catch (err) { next(err); }
+});
+
+// Set (or clear with null) a single category budget.
+apiRouter.put('/budgets', async (req, res, next) => {
+  try {
+    const { category, monthly_budget } = req.body || {};
+    if (!category) return res.status(400).json({ error: 'category required' });
+    if (monthly_budget == null) {
+      await q('DELETE FROM budgets WHERE category = $1', [category]);
+      return res.json({ ok: true, category, monthly_budget: null });
+    }
+    const n = Number(monthly_budget);
+    if (Number.isNaN(n) || n < 0) return res.status(400).json({ error: 'monthly_budget must be a non-negative number' });
+    const { rows } = await q(
+      `INSERT INTO budgets (category, monthly_budget) VALUES ($1, $2)
+       ON CONFLICT (category) DO UPDATE SET monthly_budget = EXCLUDED.monthly_budget
+       RETURNING category, monthly_budget::float AS monthly_budget`,
+      [category, n]
+    );
+    res.json(rows[0]);
+  } catch (err) { next(err); }
+});
+
+// Replace the full budget set (used by "apply suggestions").
+apiRouter.post('/budgets/apply', async (req, res, next) => {
+  try {
+    const { budgets } = req.body || {};
+    if (!Array.isArray(budgets) || !budgets.length) return res.status(400).json({ error: 'budgets array required' });
+    for (const b of budgets) {
+      if (!b.category || Number.isNaN(Number(b.monthly_budget))) {
+        return res.status(400).json({ error: 'each budget needs category + numeric monthly_budget' });
+      }
+    }
+    await q('DELETE FROM budgets');
+    for (const b of budgets) {
+      await q('INSERT INTO budgets (category, monthly_budget) VALUES ($1, $2)', [b.category, Math.round(Number(b.monthly_budget))]);
+    }
+    res.json({ ok: true, count: budgets.length });
+  } catch (err) { next(err); }
+});
+
+// AI budget proposal from real income + spending behavior (does not apply).
+apiRouter.post('/budgets/suggest', async (_req, res, next) => {
+  try {
+    res.json(await suggestBudgets());
   } catch (err) { next(err); }
 });
 

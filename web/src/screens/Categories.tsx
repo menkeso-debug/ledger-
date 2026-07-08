@@ -1,12 +1,164 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { useNav } from '../App';
+import { api } from '../lib/api';
 import { money } from '../lib/format';
-import { Panel, ChangeChip, Sk, EmptyState, Bar } from '../components/ui';
+import { Panel, ChangeChip, Sk, EmptyState, Bar, FilledButton, OutlineButton } from '../components/ui';
 
 const GRID: React.CSSProperties = {
   display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 130px', gap: 16, alignItems: 'center',
 };
+
+interface BudgetProposal {
+  summary: string;
+  monthly_income_estimate: number;
+  total_budget: number;
+  budgets: { category: string; monthly_budget: number; rationale: string }[];
+}
+
+function BudgetAdvisor() {
+  const { refresh, categories } = useStore();
+  const [busy, setBusy] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [proposal, setProposal] = useState<BudgetProposal | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentByCat = new Map((categories.data || []).map((c) => [c.name, c.budget]));
+
+  const suggest = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setProposal(await api.post<BudgetProposal>('/api/budgets/suggest'));
+    } catch {
+      setError('Suggestion failed — needs at least a month of transaction history.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const apply = async () => {
+    if (!proposal) return;
+    setApplying(true);
+    try {
+      await api.post('/api/budgets/apply', { budgets: proposal.budgets });
+      await refresh();
+      setProposal(null);
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: 18 }}>
+      {!proposal && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <FilledButton onClick={suggest} disabled={busy}>
+            {busy ? 'Analyzing your behavior…' : '✦ Suggest budgets from my behavior'}
+          </FilledButton>
+          <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+            Reads your income streams and 6 months of spending, proposes a budget per category. Click any budget figure below to edit it manually.
+          </span>
+          {error && <span style={{ fontSize: 12.5, color: 'var(--neg)' }}>{error}</span>}
+        </div>
+      )}
+      {proposal && (
+        <Panel style={{ borderRadius: 18, padding: '22px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />
+            <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 6, color: 'var(--accent)', background: 'var(--accent-soft)' }}>
+              Proposed budgets
+            </span>
+            <span className="num" style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              income ~{money(proposal.monthly_income_estimate)}/mo · total budget {money(proposal.total_budget)}
+            </span>
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.55, marginBottom: 14 }}>{proposal.summary}</div>
+          {proposal.budgets.map((b) => {
+            const cur = currentByCat.get(b.category);
+            return (
+              <div key={b.category} style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '9px 0', borderBottom: '1px solid var(--hairline-2)' }}>
+                <span style={{ fontSize: 14, fontWeight: 550, width: 120, flexShrink: 0 }}>{b.category}</span>
+                <span className="num" style={{ fontSize: 14, fontWeight: 600, width: 150, flexShrink: 0 }}>
+                  {cur != null && <span style={{ color: 'var(--text-3)', textDecoration: 'line-through', fontWeight: 500 }}>{money(cur)}</span>}
+                  {' '}→ {money(b.monthly_budget)}
+                </span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.4 }}>{b.rationale}</span>
+              </div>
+            );
+          })}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <FilledButton onClick={apply} disabled={applying}>{applying ? 'Applying…' : 'Apply these budgets'}</FilledButton>
+            <OutlineButton onClick={() => setProposal(null)}>Discard</OutlineButton>
+          </div>
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+function BudgetCell({ category, spend, budget }: { category: string; spend: number; budget: number | null }) {
+  const { refresh } = useStore();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    const n = Number(value.replace(/[$,\s]/g, ''));
+    if (Number.isNaN(n)) return setEditing(false);
+    setSaving(true);
+    try {
+      await api.put('/api/budgets', { category, monthly_budget: n });
+      await refresh();
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+        <input
+          autoFocus
+          className="num"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+          style={{
+            width: 90, fontSize: 13, fontWeight: 600, textAlign: 'right',
+            border: '1px solid var(--accent)', borderRadius: 8, padding: '4px 8px',
+            background: 'var(--surface)', color: 'var(--text)', outline: 'none',
+          }}
+        />
+        <span onClick={save} style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', cursor: 'pointer' }}>
+          {saving ? '…' : 'Save'}
+        </span>
+      </span>
+    );
+  }
+
+  const over = budget != null && spend > budget;
+  const pct = budget ? Math.min(100, Math.round((spend / budget) * 100)) : 0;
+  return (
+    <span
+      onClick={(e) => { e.stopPropagation(); setValue(budget != null ? String(budget) : ''); setEditing(true); }}
+      title="Click to edit budget"
+      style={{ cursor: 'pointer', display: 'inline-block' }}
+    >
+      {budget != null ? (
+        <>
+          <Bar pct={pct} over={over} width={120} />
+          <span className="num" style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 5, display: 'block', borderBottom: '1px dashed var(--hairline)', width: 'fit-content' }}>
+            {money(spend)} / {money(budget)}
+          </span>
+        </>
+      ) : (
+        <span style={{ fontSize: 12, color: 'var(--text-3)', borderBottom: '1px dashed var(--hairline)' }}>Set budget</span>
+      )}
+    </span>
+  );
+}
 
 export function Categories() {
   const { categories } = useStore();

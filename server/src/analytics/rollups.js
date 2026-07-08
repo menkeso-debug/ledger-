@@ -365,6 +365,27 @@ export async function accountSparkSeries() {
   return result;
 }
 
+// Per-category monthly spend for the last N *full* months (budget baselines).
+export async function monthlyCategoryHistory(months = 6) {
+  const { rows } = await q(
+    `SELECT t.category, to_char(date_trunc('month', t.date), 'YYYY-MM') AS month,
+            SUM(t.amount)::float AS spend
+     FROM transactions t
+     WHERE ${SPEND_FILTER}
+       AND t.date >= (date_trunc('month', CURRENT_DATE) - make_interval(months => $1))::date
+       AND t.date < date_trunc('month', CURRENT_DATE)::date
+     GROUP BY t.category, 2
+     ORDER BY t.category, 2`,
+    [months]
+  );
+  const byCat = {};
+  for (const r of rows) {
+    if (!byCat[r.category]) byCat[r.category] = {};
+    byCat[r.category][r.month] = Math.round(r.spend);
+  }
+  return byCat;
+}
+
 // --- Income streams & 30-day cash flow projection ---------------------------
 
 const classifyCadence = (gap) => {
