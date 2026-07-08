@@ -92,7 +92,8 @@ export async function refreshAccounts(itemUuid, accessToken = null) {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
        ON CONFLICT (plaid_account_id) DO UPDATE SET
          name = EXCLUDED.name, official_name = EXCLUDED.official_name, mask = EXCLUDED.mask,
-         type = EXCLUDED.type, subtype = EXCLUDED.subtype, tier = EXCLUDED.tier,
+         type = EXCLUDED.type, subtype = EXCLUDED.subtype,
+         tier = CASE WHEN accounts.tier_locked THEN accounts.tier ELSE EXCLUDED.tier END,
          current_balance = EXCLUDED.current_balance, available_balance = EXCLUDED.available_balance,
          credit_limit = EXCLUDED.credit_limit, balances_updated_at = now()`,
       [

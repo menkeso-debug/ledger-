@@ -76,6 +76,24 @@ apiRouter.get('/accounts', async (_req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Manually pin an account's card tier (survives syncs). Body: { tier }
+const VALID_TIERS = ['plat', 'gold', 'delta', 'csr', 'prime', 'cpc', 'capone', 'apple', 'other'];
+apiRouter.put('/accounts/:id/tier', async (req, res, next) => {
+  try {
+    const { tier } = req.body || {};
+    if (!VALID_TIERS.includes(tier)) {
+      return res.status(400).json({ error: `tier must be one of ${VALID_TIERS.join(', ')}` });
+    }
+    const { rows } = await q(
+      `UPDATE accounts SET tier = $2, tier_locked = true WHERE id = $1
+       RETURNING id, name, mask, tier`,
+      [req.params.id, tier]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'account not found' });
+    res.json(rows[0]);
+  } catch (err) { next(err); }
+});
+
 // --- Categories tree ---------------------------------------------------------
 
 apiRouter.get('/categories', async (_req, res, next) => {
