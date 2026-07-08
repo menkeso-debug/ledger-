@@ -19,6 +19,7 @@ export async function createLinkToken() {
     transactions: { days_requested: 730 }, // 24-month backfill for baselines
   };
   if (config.plaid.webhookUrl) req.webhook = config.plaid.webhookUrl;
+  if (config.plaid.redirectUri) req.redirect_uri = config.plaid.redirectUri;
   const { data } = await plaid().linkTokenCreate(req);
   return data; // { link_token, expiration }
 }

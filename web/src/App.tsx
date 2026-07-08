@@ -185,7 +185,10 @@ function Header() {
 }
 
 function Shell() {
-  const [screen, setScreen] = useState<ScreenId>('overview');
+  // Land on Accounts when returning from a bank's OAuth page so Link can resume.
+  const [screen, setScreen] = useState<ScreenId>(() =>
+    window.location.search.includes('oauth_state_id') ? 'accounts' : 'overview'
+  );
   const [txFilter, setTxFilter] = useState<{ accountId?: string; query?: string }>({});
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored = localStorage.getItem('ledger-theme');

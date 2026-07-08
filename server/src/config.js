@@ -19,6 +19,9 @@ export const config = {
     env: process.env.PLAID_ENV || 'sandbox',
     // Public URL of this service, used for the webhook endpoint registered with Plaid.
     webhookUrl: process.env.PLAID_WEBHOOK_URL || null,
+    // OAuth redirect URI (required for Chase/Amex in production). Must be registered
+    // in the Plaid dashboard under Developers -> API -> Allowed redirect URIs.
+    redirectUri: process.env.PLAID_REDIRECT_URI || null,
     // Verify inbound webhook JWTs against Plaid's verification keys. On by default outside sandbox.
     verifyWebhooks: process.env.PLAID_VERIFY_WEBHOOKS
       ? process.env.PLAID_VERIFY_WEBHOOKS === 'true'
