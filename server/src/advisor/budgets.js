@@ -71,10 +71,10 @@ Rules:
 
   // Hard guarantee, independent of the model: total budget never exceeds 90%
   // of estimated income. Fixed Housing is preserved; everything else scales.
-  const income = proposal.monthly_income_estimate || 0;
-  const cap = income * 0.9;
+  const estIncome = proposal.monthly_income_estimate || 0;
+  const cap = estIncome * 0.9;
   let total = proposal.budgets.reduce((s, b) => s + b.monthly_budget, 0);
-  if (income > 0 && total > cap) {
+  if (estIncome > 0 && total > cap) {
     const housing = proposal.budgets.find((b) => b.category === 'Housing')?.monthly_budget || 0;
     const scalable = total - housing;
     const factor = Math.max((cap - housing) / Math.max(scalable, 1), 0.1);
