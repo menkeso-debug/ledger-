@@ -211,7 +211,7 @@ export async function syncItemByPlaidId(plaidItemId) {
 }
 
 export async function syncAllItems() {
-  const { rows } = await q(`SELECT id FROM plaid_items WHERE status != 'login_required'`);
+  const { rows } = await q(`SELECT id FROM plaid_items WHERE status NOT IN ('login_required', 'manual')`);
   const results = [];
   for (const r of rows) {
     try {

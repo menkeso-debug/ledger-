@@ -5,6 +5,7 @@ import { Panel, Sk, EmptyState } from '../components/ui';
 import { CardTile } from '../components/CardTile';
 import { Sparkline } from '../components/Sparkline';
 import { PlaidLinkButton } from '../components/PlaidLinkButton';
+import { AppleCardImport } from '../components/AppleCardImport';
 
 export function Accounts() {
   const { accounts } = useStore();
@@ -25,7 +26,12 @@ export function Accounts() {
           icon="＋"
           title="No accounts connected"
           body="Link your cards and checking through Plaid to start the 24-month backfill and daily sync."
-          action={<PlaidLinkButton />}
+          action={
+            <span style={{ display: 'inline-flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <PlaidLinkButton />
+              <AppleCardImport />
+            </span>
+          }
         />
       </Panel>
     );
@@ -92,8 +98,9 @@ export function Accounts() {
           );
         })}
       </div>
-      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
+      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <PlaidLinkButton label="Connect another account" />
+        <AppleCardImport />
       </div>
     </div>
   );

@@ -72,6 +72,12 @@ export const TIER_ART: Record<Tier, TierArt> = {
     glow: 'radial-gradient(110% 85% at 100% 0%,rgba(150,180,215,.22),transparent 55%)',
     sheen: dSheen, fg: '#DEE7F0', chip: silverChip, emboss: embD, edge: edgeD,
   },
+  apple: {
+    issuer: 'Apple', short: 'Apple Card', typeLabel: 'Credit card',
+    base: 'linear-gradient(135deg,#FCFCFD 0%,#E9EBEE 42%,#D8DBDF 58%,#F2F3F5 78%,#FFFFFF 100%)',
+    glow: 'radial-gradient(120% 90% at 0% 0%,rgba(255,255,255,.8),transparent 55%)',
+    sheen: lSheen, fg: '#3A3D43', chip: silverChip, emboss: embL, edge: edgeL,
+  },
   other: {
     issuer: 'Card', short: 'Card', typeLabel: 'Credit card',
     base: 'linear-gradient(140deg,#4A4E56 0%,#26282D 44%,#141519 62%,#383B42 100%)',

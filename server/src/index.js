@@ -10,6 +10,7 @@ import { apiRouter } from './routes/api.js';
 import { plaidRouter } from './routes/plaid.js';
 import { rewardsRouter } from './routes/rewards.js';
 import { advisorRouter } from './routes/advisor.js';
+import { importRouter } from './routes/import.js';
 import { syncAllItems } from './plaid/sync.js';
 import { computeInsights } from './analytics/engine.js';
 import { generateBriefing } from './advisor/briefing.js';
@@ -22,11 +23,14 @@ app.disable('x-powered-by');
 
 // Webhook route needs the raw body for JWT verification — mount before json().
 app.use('/api/plaid/webhook', express.raw({ type: '*/*', limit: '1mb' }));
+// CSV imports can be years of statements — allow a larger body on that route only.
+app.use('/api/import', express.json({ limit: '25mb' }));
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/plaid', plaidRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/advisor', advisorRouter);
+app.use('/api/import', importRouter);
 app.use('/api', apiRouter);
 
 // Serve the built frontend (single Railway service).

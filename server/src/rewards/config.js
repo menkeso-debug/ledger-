@@ -90,6 +90,8 @@ export const EARN_RATES = {
     label: 'Capital One',
     rate: () => 2,
   },
+  // Apple Card Daily Cash lands as statement credit, not a points balance — no tracking.
+  apple: { program: null, label: 'Apple Card', rate: () => 0 },
   other: { program: null, label: 'Other card', rate: () => 0 },
 };
 
