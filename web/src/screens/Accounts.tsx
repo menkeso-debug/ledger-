@@ -61,10 +61,11 @@ export function Accounts() {
               }}
             >
               <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Real card aspect ratio (CR80 ≈ 1.586:1), not the square from the prototype */}
                 <CardTile
                   tier={a.tier}
                   height={112}
-                  width={112}
+                  width={178}
                   small
                   issuer={a.tier === 'other' ? a.institution_name : undefined}
                 />
