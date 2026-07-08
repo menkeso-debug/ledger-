@@ -149,7 +149,31 @@ export async function computeInsights() {
     count++;
   }
 
-  // 7. Card-credit nudges from the rewards layer (unused / near expiry)
+  // 7. Manual-import staleness: Apple Card only updates when a CSV is uploaded.
+  const { rows: staleRows } = await q(
+    `SELECT MAX(t.date) AS last_txn
+     FROM transactions t JOIN accounts a ON a.id = t.account_id
+     WHERE a.plaid_account_id = 'manual-apple-card' AND NOT t.removed`
+  );
+  if (staleRows[0]?.last_txn) {
+    const daysStale = Math.floor((Date.now() - new Date(staleRows[0].last_txn).getTime()) / 864e5);
+    if (daysStale >= 21) {
+      await upsertInsight({
+        kind: 'stale_import', tone: 'amber', tag: 'Data gap',
+        title: 'Apple Card data is going stale',
+        body: `Newest Apple Card transaction is ${daysStale} days old. Export a fresh CSV from Wallet and upload it on the Accounts screen so spend and forecasts stay accurate.`,
+        impact: `${daysStale}d`, impactSub: 'since last data', cta: 'Import Apple Card CSV',
+        dedupeKey: `stale_import:apple:${ym}`,
+        data: { daysStale },
+      });
+      count++;
+    } else {
+      // Fresh again — clear any standing nudge for this month
+      await q(`UPDATE insights SET dismissed = true WHERE dedupe_key = $1`, [`stale_import:apple:${ym}`]);
+    }
+  }
+
+  // 8. Card-credit nudges from the rewards layer (unused / near expiry)
   try {
     const credits = await creditsStatus();
     for (const c of credits) {
