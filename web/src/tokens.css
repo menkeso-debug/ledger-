@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens — verbatim from the Ledger handoff */
+:root {
+  --canvas:#F5F5F7; --surface:#FFFFFF; --surface-2:#FBFBFD; --surface-3:#F0F0F2;
+  --text:#1D1D1F; --text-2:#6E6E73; --text-3:#A1A1A6;
+  --hairline:rgba(0,0,0,0.07); --hairline-2:rgba(0,0,0,0.04);
+  --accent:#0A84FF; --accent-soft:rgba(10,132,255,0.10); --accent-2:#0071E3;
+  --pos:#1D8F44; --pos-soft:rgba(52,199,89,0.14);
+  --neg:#D8342A; --neg-soft:rgba(255,59,48,0.10);
+  --amber:#B25E00; --amber-soft:rgba(255,159,10,0.14);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.05);
+  --shadow:0 1px 3px rgba(0,0,0,0.05), 0 12px 28px -14px rgba(0,0,0,0.14);
+  --shadow-lg:0 2px 6px rgba(0,0,0,0.04), 0 30px 60px -20px rgba(0,0,0,0.22);
+}
+.dark {
+  --canvas:#000000; --surface:#1C1C1E; --surface-2:#242426; --surface-3:#2C2C2E;
+  --text:#F5F5F7; --text-2:#98989D; --text-3:#636366;
+  --hairline:rgba(255,255,255,0.10); --hairline-2:rgba(255,255,255,0.05);
+  --accent:#0A84FF; --accent-soft:rgba(10,132,255,0.18); --accent-2:#409CFF;
+  --pos:#30D158; --pos-soft:rgba(48,209,88,0.18);
+  --neg:#FF453A; --neg-soft:rgba(255,69,58,0.16);
+  --amber:#FFD60A; --amber-soft:rgba(255,214,10,0.16);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.4);
+  --shadow:0 1px 3px rgba(0,0,0,0.5), 0 14px 34px -16px rgba(0,0,0,0.7);
+  --shadow-lg:0 2px 6px rgba(0,0,0,0.5), 0 34px 70px -22px rgba(0,0,0,0.8);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background: var(--canvas);
+  color: var(--text);
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { opacity: 0.8; }
+input { font-family: inherit; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--hairline); border-radius: 8px;
+  border: 3px solid transparent; background-clip: content-box;
+}
+
+/* Tabular figures for every numeric value */
+.num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+/* Skeleton shimmer */
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk {
+  background: linear-gradient(90deg, var(--surface-3) 25%, var(--hairline) 38%, var(--surface-3) 62%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 9px;
+}
+
+/* App shell responsive behavior (≤880px: sidebar becomes sticky top bar) */
+@media (max-width: 880px) {
+  .approot { flex-direction: column; }
+  .sidebar {
+    width: 100% !important; height: auto !important; position: sticky; top: 0; z-index: 30;
+    flex-direction: row !important; align-items: center; gap: 10px; padding: 10px 14px !important;
+    overflow-x: auto; border-right: none !important; border-bottom: 1px solid var(--hairline);
+  }
+  .sidebar > div:first-child { padding: 2px 6px !important; flex-shrink: 0; }
+  .sidebar nav { flex-direction: row !important; flex: 1 1 auto; gap: 4px !important; }
+  .sidebar nav > div { white-space: nowrap; }
+  .sidefoot { margin-top: 0 !important; flex-direction: row !important; align-items: center; gap: 8px !important; width: auto !important; padding: 0 !important; flex-shrink: 0; }
+  .sideuser { display: none !important; }
+  .apphead { padding: 20px 18px 10px !important; }
+  .screenpad { padding: 8px 16px 60px !important; }
+}
+@media (max-width: 720px) {
+  .catgrid { grid-template-columns: 1.5fr 1fr 88px !important; }
+  .catbudget { display: none !important; }
+}

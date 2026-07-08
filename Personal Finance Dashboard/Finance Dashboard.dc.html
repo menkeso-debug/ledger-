@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent); opacity: 0.8; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+  .num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  @keyframes shimmer { 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
+  .sk { background:linear-gradient(90deg,var(--surface-3) 25%, var(--hairline) 38%, var(--surface-3) 62%); background-size:200% 100%; animation:shimmer 1.5s ease-in-out infinite; border-radius:9px; }
+  @media (max-width:880px){
+    .approot{ flex-direction:column; }
+    .sidebar{ width:100% !important; height:auto !important; position:sticky; top:0; z-index:30; flex-direction:row !important; align-items:center; gap:10px; padding:10px 14px !important; overflow-x:auto; }
+    .sidebar > div:first-child{ padding:2px 6px !important; flex-shrink:0; }
+    .sidebar nav{ flex-direction:row !important; flex:1 1 auto; gap:4px !important; }
+    .sidebar nav > div{ white-space:nowrap; }
+    .sidefoot{ margin-top:0 !important; flex-direction:row !important; align-items:center; gap:8px !important; width:auto !important; padding:0 !important; flex-shrink:0; }
+    .sideuser{ display:none !important; }
+    .apphead{ padding:20px 18px 10px !important; }
+    .screenpad{ padding:8px 16px 60px !important; }
+  }
+  @media (max-width:720px){
+    .catgrid{ grid-template-columns:1.5fr 1fr 88px !important; }
+    .catbudget{ display:none !important; }
+  }
+  :root {
+    --canvas:#F5F5F7; --surface:#FFFFFF; --surface-2:#FBFBFD; --surface-3:#F0F0F2;
+    --text:#1D1D1F; --text-2:#6E6E73; --text-3:#A1A1A6;
+    --hairline:rgba(0,0,0,0.07); --hairline-2:rgba(0,0,0,0.04);
+    --accent:#0A84FF; --accent-soft:rgba(10,132,255,0.10); --accent-2:#0071E3;
+    --pos:#1D8F44; --pos-soft:rgba(52,199,89,0.14);
+    --neg:#D8342A; --neg-soft:rgba(255,59,48,0.10);
+    --amber:#B25E00; --amber-soft:rgba(255,159,10,0.14);
+    --shadow-sm:0 1px 2px rgba(0,0,0,0.05);
+    --shadow:0 1px 3px rgba(0,0,0,0.05), 0 12px 28px -14px rgba(0,0,0,0.14);
+    --shadow-lg:0 2px 6px rgba(0,0,0,0.04), 0 30px 60px -20px rgba(0,0,0,0.22);
+  }
+  .theme-dark {
+    --canvas:#000000; --surface:#1C1C1E; --surface-2:#242426; --surface-3:#2C2C2E;
+    --text:#F5F5F7; --text-2:#98989D; --text-3:#636366;
+    --hairline:rgba(255,255,255,0.10); --hairline-2:rgba(255,255,255,0.05);
+    --accent:#0A84FF; --accent-soft:rgba(10,132,255,0.18); --accent-2:#409CFF;
+    --pos:#30D158; --pos-soft:rgba(48,209,88,0.18);
+    --neg:#FF453A; --neg-soft:rgba(255,69,58,0.16);
+    --amber:#FFD60A; --amber-soft:rgba(255,214,10,0.16);
+    --shadow-sm:0 1px 2px rgba(0,0,0,0.4);
+    --shadow:0 1px 3px rgba(0,0,0,0.5), 0 14px 34px -16px rgba(0,0,0,0.7);
+    --shadow-lg:0 2px 6px rgba(0,0,0,0.5), 0 34px 70px -22px rgba(0,0,0,0.8);
+  }
+</style>
+</helmet>
+
+<div class="approot theme-{{ theme }}" style="display:flex; min-height:100vh; width:100%; background:var(--canvas); color:var(--text); transition:background .3s ease, color .3s ease;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" style="width:248px; flex-shrink:0; position:sticky; top:0; align-self:flex-start; height:100vh; display:flex; flex-direction:column; padding:22px 14px; border-right:1px solid var(--hairline); background:var(--surface); transition:background .3s ease;">
+    <div style="display:flex; align-items:center; gap:11px; padding:6px 10px 22px;">
+      <div style="width:30px; height:30px; border-radius:9px; background:linear-gradient(150deg,var(--accent-2),var(--accent)); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px -3px var(--accent-soft);">
+        <div style="width:12px; height:12px; border-radius:3px; background:#fff; opacity:.95;"></div>
+      </div>
+      <div>
+        <div style="font-size:15px; font-weight:600; letter-spacing:-0.02em;">Ledger</div>
+        <div style="font-size:11px; color:var(--text-3); font-weight:450; margin-top:1px;">Household finance</div>
+      </div>
+    </div>
+
+    <nav style="display:flex; flex-direction:column; gap:2px;">
+      <sc-for list="{{ nav }}" as="item" hint-placeholder-count="7">
+        <div onClick="{{ item.go }}" style="{{ item.style }}">
+          <span style="{{ item.dotStyle }}"></span>
+          <span style="flex:1;">{{ item.label }}</span>
+          <sc-if value="{{ item.badge }}" hint-placeholder-val="">
+            <span style="font-size:11px; font-weight:600; color:var(--accent); background:var(--accent-soft); padding:1px 7px; border-radius:20px;">{{ item.badge }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </nav>
+
+    <div class="sidefoot" style="margin-top:auto; display:flex; flex-direction:column; gap:12px; padding:0 6px;">
+      <div onClick="{{ toggleTheme }}" style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border-radius:11px; cursor:pointer; background:var(--surface-2); border:1px solid var(--hairline);">
+        <span style="font-size:13px; font-weight:500; color:var(--text-2);">{{ themeLabel }}</span>
+        <span style="width:34px; height:20px; border-radius:20px; background:var(--accent); position:relative; transition:background .2s;">
+          <span style="{{ knobStyle }}"></span>
+        </span>
+      </div>
+      <div class="sideuser" style="display:flex; align-items:center; gap:10px; padding:6px 6px 0;">
+        <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#C9A24B,#E8C77E); flex-shrink:0;"></div>
+        <div style="min-width:0;">
+          <div style="font-size:13px; font-weight:550; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Jordan Avery</div>
+          <div style="font-size:11px; color:var(--text-3);">Personal · Premium</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main style="flex:1; min-width:0; display:flex; flex-direction:column; max-width:1180px; margin:0 auto; width:100%;">
+    <header class="apphead" style="display:flex; align-items:flex-end; justify-content:space-between; padding:38px 44px 18px; gap:20px; flex-wrap:wrap;">
+      <div>
+        <div style="font-size:13px; font-weight:500; color:var(--text-3); margin-bottom:5px;">{{ eyebrow }}</div>
+        <h1 style="margin:0; font-size:clamp(24px,4.4vw,30px); font-weight:650; letter-spacing:-0.03em; line-height:1.05;">{{ screenTitle }}</h1>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+        <div title="Preview data state" style="display:flex; gap:2px; padding:3px; border-radius:11px; background:var(--surface-3); border:1px solid var(--hairline);">
+          <sc-for list="{{ stateTabs }}" as="st" hint-placeholder-count="3">
+            <span onClick="{{ st.go }}" style="{{ st.style }}">{{ st.label }}</span>
+          </sc-for>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:11px; background:var(--surface); border:1px solid var(--hairline); font-size:13px; color:var(--text-2); box-shadow:var(--shadow-sm);">
+          <span style="width:6px; height:6px; border-radius:50%; background:var(--pos);"></span>
+          Synced · Jul 8
+        </div>
+        <div style="width:40px; height:40px; border-radius:11px; background:var(--surface); border:1px solid var(--hairline); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-sm); font-size:16px; color:var(--text-2);">⌕</div>
+      </div>
+    </header>
+
+    <div class="screenpad" style="padding:8px 44px 60px; flex:1;">
+
+      <!-- ============ OVERVIEW ============ -->
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; flex-direction:column; gap:22px;">
+
+        <!-- Balance + spend hero -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:22px;">
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:28px 30px; box-shadow:var(--shadow); display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="font-size:13px; font-weight:500; color:var(--text-2);">Net cash available</div>
+              <div class="num" style="font-size:clamp(38px,9vw,52px); font-weight:680; letter-spacing:-0.035em; margin-top:8px; line-height:1;">$84,320<span style="font-size:26px; color:var(--text-3); font-weight:600;">.44</span></div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+                <span style="display:inline-flex; align-items:center; gap:4px; font-size:13px; font-weight:600; color:var(--pos); background:var(--pos-soft); padding:3px 9px; border-radius:20px;">↑ 2.4%</span>
+                <span style="font-size:13px; color:var(--text-3);">+$1,980 this month</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:26px; margin-top:26px; padding-top:20px; border-top:1px solid var(--hairline-2);">
+              <div>
+                <div style="font-size:12px; color:var(--text-3); font-weight:500;">Card balances owed</div>
+                <div class="num" style="font-size:19px; font-weight:600; margin-top:4px;">$17,710</div>
+              </div>
+              <div>
+                <div style="font-size:12px; color:var(--text-3); font-weight:500;">Statements due</div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                  <div class="num" style="font-size:19px; font-weight:660; color:var(--amber);">$4,210</div>
+                  <span style="font-size:11px; font-weight:600; color:var(--amber); background:var(--amber-soft); padding:2px 8px; border-radius:20px;">Due in 6d</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:26px 28px; box-shadow:var(--shadow); display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:baseline; justify-content:space-between;">
+              <div style="font-size:13px; font-weight:500; color:var(--text-2);">Spent in July</div>
+              <div style="font-size:12px; color:var(--text-3);">of $20,000 budget</div>
+            </div>
+            <div class="num" style="font-size:34px; font-weight:660; letter-spacing:-0.03em; margin-top:6px;">$18,240</div>
+            <div style="margin-top:14px; margin-bottom:auto;">
+              <div style="height:8px; border-radius:20px; background:var(--surface-3); overflow:hidden;">
+                <div style="width:91%; height:100%; border-radius:20px; background:linear-gradient(90deg,var(--accent-2),var(--accent));"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:7px; font-size:12px; color:var(--text-3);">
+                <span>91% used</span><span>$1,760 left</span>
+              </div>
+            </div>
+            <div style="position:relative; margin-top:16px;">
+              <sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}">
+              <div style="position:relative; height:98px;">
+                <svg viewBox="0 0 320 96" width="100%" height="96" preserveAspectRatio="none" style="position:absolute; inset:0; display:block;">
+                  <defs>
+                    <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.30"></stop>
+                      <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"></stop>
+                    </linearGradient>
+                  </defs>
+                  <line x1="0" y1="31" x2="320" y2="31" stroke="var(--hairline)" stroke-width="1" stroke-dasharray="2 5"></line>
+                  <line x1="0" y1="62" x2="320" y2="62" stroke="var(--hairline)" stroke-width="1" stroke-dasharray="2 5"></line>
+                  <line x1="0" y1="94" x2="320" y2="94" stroke="var(--hairline)" stroke-width="1.2"></line>
+                  <path d="{{ ov.areaPath }}" fill="url(#areaFill)"></path>
+                  <path d="{{ ov.prevPath }}" fill="none" stroke="var(--text-3)" stroke-width="1.5" stroke-opacity="0.55" stroke-dasharray="4 4"></path>
+                  <path d="{{ ov.linePath }}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                <span class="num" style="position:absolute; left:0; bottom:2px; font-size:11px; color:var(--text-3); background:var(--surface); padding:0 3px; border-radius:4px;">$0</span>
+                <span style="position:absolute; right:1px; top:-3px; display:flex; align-items:center; gap:6px;">
+                  <span class="num" style="font-size:12px; font-weight:700; color:var(--accent);">$18,240</span>
+                  <span style="width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);"></span>
+                </span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:11px; font-size:11px; color:var(--text-3);">
+                <span>Jul 1</span>
+                <span style="display:flex; gap:14px;">
+                  <span style="display:flex; align-items:center; gap:5px;"><span style="width:14px; height:2px; background:var(--accent); border-radius:2px;"></span>This month</span>
+                  <span style="display:flex; align-items:center; gap:5px;"><span style="width:14px; border-top:2px dashed var(--text-3);"></span>Last month</span>
+                </span>
+                <span>Jul 8</span>
+              </div>
+              </sc-if>
+              <sc-if value="{{ isLoading }}" hint-placeholder-val="">
+                <div class="sk" style="height:96px; border-radius:12px;"></div>
+              </sc-if>
+              <sc-if value="{{ isEmpty }}" hint-placeholder-val="">
+                <div style="height:96px; display:flex; align-items:center; justify-content:center; color:var(--text-3); font-size:13px; border:1px dashed var(--hairline); border-radius:12px;">Spend history appears after a few days</div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card tiles row -->
+        <div>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:13px;">
+            <div style="font-size:15px; font-weight:600; letter-spacing:-0.01em;">Cards</div>
+            <span onClick="{{ goAccounts }}" style="font-size:13px; color:var(--accent); cursor:pointer; font-weight:500;">All accounts →</span>
+          </div>
+          <div style="display:flex; gap:14px; overflow-x:auto; padding-bottom:6px;">
+            <sc-for list="{{ accounts }}" as="a" hint-placeholder-count="4">
+              <div onClick="{{ a.go }}" style="flex:0 0 200px; cursor:pointer;">
+                <div style="{{ a.tileStyle }}">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <span style="font-size:11px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; opacity:.82;">{{ a.issuer }}</span>
+                    <span style="{{ a.chipStyle }}"></span>
+                  </div>
+                  <div>
+                    <div style="font-size:12.5px; font-weight:500; opacity:.9;">{{ a.short }}</div>
+                    <div class="num" style="font-size:13px; opacity:.72; margin-top:2px; letter-spacing:.08em;">•••• {{ a.last4 }}</div>
+                  </div>
+                </div>
+                <div style="padding:11px 4px 0;">
+                  <div class="num" style="font-size:18px; font-weight:640; letter-spacing:-0.02em;">{{ a.balanceStr }}</div>
+                  <div style="font-size:12px; color:var(--text-3); margin-top:1px;">{{ a.sub }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- AI insight + top categories -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:22px;">
+          <div style="{{ heroInsightStyle }}">
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+              <span style="width:24px; height:24px; border-radius:7px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:13px; font-weight:700;">✦</span>
+              <span style="font-size:13px; font-weight:600; color:var(--accent);">Ledger Intelligence</span>
+            </div>
+            <sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:21px; font-weight:600; letter-spacing:-0.02em; line-height:1.32;">Dining is up <span style="color:var(--neg);">22%</span> this month — <span style="color:var(--text-2); font-weight:500;">$3,120 vs your usual $2,560, driven by 3 new merchants.</span></div>
+            <div style="display:flex; gap:8px; margin-top:20px;">
+              <span onClick="{{ goInsights }}" style="font-size:13px; font-weight:550; color:#fff; background:var(--accent); padding:9px 16px; border-radius:11px; cursor:pointer;">See breakdown</span>
+              <span onClick="{{ goInsights }}" style="font-size:13px; font-weight:550; color:var(--text); background:var(--surface); border:1px solid var(--hairline); padding:9px 16px; border-radius:11px; cursor:pointer;">Set a limit</span>
+            </div>
+            </sc-if>
+            <sc-if value="{{ isLoading }}" hint-placeholder-val="">
+              <div class="sk" style="width:92%; height:20px; margin-bottom:10px;"></div>
+              <div class="sk" style="width:78%; height:20px; margin-bottom:22px;"></div>
+              <div class="sk" style="width:130px; height:36px; border-radius:11px;"></div>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="">
+              <div style="font-size:16px; font-weight:600;">Warming up your daily read</div>
+              <div style="font-size:14px; color:var(--text-2); line-height:1.5; margin-top:6px;">Once we've seen a few days of activity, your morning insight lands right here.</div>
+            </sc-if>
+          </div>
+
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:22px 24px; box-shadow:var(--shadow);">
+            <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Top categories</div>
+            <sc-for list="{{ ov.topCats }}" as="c" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--hairline-2);">
+                <div style="flex:1; min-width:0;">
+                  <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <span style="font-size:14px; font-weight:500;">{{ c.name }}</span>
+                    <span class="num" style="font-size:14px; font-weight:600;">{{ c.spend }}</span>
+                  </div>
+                  <div style="height:5px; border-radius:20px; background:var(--surface-3); margin-top:7px; overflow:hidden;">
+                    <div style="{{ c.barStyle }}"></div>
+                  </div>
+                </div>
+                <span style="{{ c.chgStyle }}">{{ c.chg }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ACCOUNTS ============ -->
+      <sc-if value="{{ isAccounts }}" hint-placeholder-val="">
+      <div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:20px;">
+          <sc-for list="{{ accounts }}" as="a" hint-placeholder-count="6">
+            <div onClick="{{ a.go }}" style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:20px; box-shadow:var(--shadow); cursor:pointer; display:flex; flex-direction:column; gap:16px;">
+              <div style="display:flex; gap:16px; align-items:center;">
+                <div style="{{ a.tileStyleSm }}">
+                  <span style="font-size:10px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; opacity:.82;">{{ a.issuer }}</span>
+                  <span style="{{ a.chipStyle }}"></span>
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; letter-spacing:-0.01em;">{{ a.short }}</div>
+                  <div style="font-size:12.5px; color:var(--text-3); margin-top:2px;">{{ a.type }} · •••• {{ a.last4 }}</div>
+                  <div class="num" style="font-size:22px; font-weight:660; letter-spacing:-0.02em; margin-top:8px;">{{ a.balanceStr }}</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; padding-top:14px; border-top:1px solid var(--hairline-2);">
+                <div>
+                  <div style="font-size:12px; color:var(--text-3);">{{ a.sub }}</div>
+                  <div style="{{ a.trendStyle }}">{{ a.trend }}</div>
+                </div>
+                <svg viewBox="0 0 120 34" width="120" height="34" preserveAspectRatio="none" style="overflow:visible;">
+                  <polyline points="{{ a.sparkPts }}" fill="none" stroke="{{ a.sparkColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                  <circle cx="{{ a.sparkEndX }}" cy="{{ a.sparkEndY }}" r="2.6" fill="{{ a.sparkColor }}"></circle>
+                </svg>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CATEGORIES ============ -->
+      <sc-if value="{{ isCategories }}" hint-placeholder-val="">
+      <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; box-shadow:var(--shadow); overflow:hidden;">
+        <div class="catgrid" style="display:grid; grid-template-columns:1.6fr 1fr 1fr 130px; gap:16px; padding:15px 24px; border-bottom:1px solid var(--hairline); font-size:12px; font-weight:600; color:var(--text-3); text-transform:uppercase; letter-spacing:0.03em;">
+          <span>Category</span><span style="text-align:right;">Spent</span><span class="catbudget">Budget</span><span style="text-align:right;">vs last mo.</span>
+        </div>
+        <sc-for list="{{ categories }}" as="c" hint-placeholder-count="5">
+          <div>
+            <div onClick="{{ c.toggle }}" class="catgrid" style="display:grid; grid-template-columns:1.6fr 1fr 1fr 130px; gap:16px; padding:16px 24px; align-items:center; cursor:pointer; border-bottom:1px solid var(--hairline-2);">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span style="{{ c.caretStyle }}">›</span>
+                <span style="width:9px; height:9px; border-radius:3px; background:var(--text-3); opacity:.5;"></span>
+                <span style="font-size:15px; font-weight:600;">{{ c.name }}</span>
+              </div>
+              <span class="num" style="font-size:15px; font-weight:600; text-align:right;">{{ c.spend }}</span>
+              <div class="catbudget">
+                <div style="height:5px; border-radius:20px; background:var(--surface-3); overflow:hidden; width:120px;">
+                  <div style="{{ c.barStyle }}"></div>
+                </div>
+                <div style="font-size:11px; color:var(--text-3); margin-top:5px;">{{ c.budgetStr }}</div>
+              </div>
+              <span style="{{ c.chgStyle }}">{{ c.chg }}</span>
+            </div>
+            <sc-if value="{{ c.open }}" hint-placeholder-val="">
+              <div style="background:var(--surface-2); box-shadow:inset 3px 0 0 rgba(10,132,255,0.28);">
+                <sc-for list="{{ c.subs }}" as="s" hint-placeholder-count="3">
+                  <div class="catgrid" style="display:grid; grid-template-columns:1.6fr 1fr 1fr 130px; gap:16px; padding:13px 24px 13px 60px; align-items:center; border-bottom:1px solid var(--hairline-2);">
+                    <span style="font-size:14px; color:var(--text-2); font-weight:450;">{{ s.name }}</span>
+                    <span class="num" style="font-size:14px; font-weight:500; text-align:right; color:var(--text-2);">{{ s.spend }}</span>
+                    <span class="catbudget" style="font-size:13px; color:var(--text-3);">{{ s.budgetStr }}</span>
+                    <span style="{{ s.chgStyle }}">{{ s.chg }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- ============ INSIGHTS ============ -->
+      <sc-if value="{{ isInsights }}" hint-placeholder-val="">
+      <div style="display:flex; flex-direction:column; gap:20px; max-width:820px;">
+        <div style="display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--hairline); border-radius:16px; padding:6px 6px 6px 18px; box-shadow:var(--shadow);">
+          <span style="color:var(--accent); font-size:16px;">✦</span>
+          <input placeholder="Ask about your spending — “How much on coffee this quarter?”" style="flex:1; border:none; outline:none; background:transparent; font-family:inherit; font-size:15px; color:var(--text); padding:12px 0;">
+          <span style="font-size:13px; font-weight:550; color:#fff; background:var(--accent); padding:10px 18px; border-radius:11px; cursor:pointer;">Ask</span>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="3">
+            <span style="font-size:13px; color:var(--text-2); background:var(--surface); border:1px solid var(--hairline); padding:7px 13px; border-radius:20px; cursor:pointer;">{{ s }}</span>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ insights }}" as="i" hint-placeholder-count="5">
+            <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:18px; padding:22px 24px; box-shadow:var(--shadow); display:flex; gap:22px; align-items:flex-start;">
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:9px; margin-bottom:9px;">
+                  <span style="{{ i.dotStyle }}"></span>
+                  <span style="{{ i.tagStyle }}">{{ i.tag }}</span>
+                  <span style="font-size:12px; color:var(--text-3);">{{ i.time }}</span>
+                </div>
+                <div style="font-size:17px; font-weight:600; letter-spacing:-0.015em;">{{ i.title }}</div>
+                <div style="font-size:14px; color:var(--text-2); line-height:1.55; margin-top:6px;">{{ i.body }}</div>
+                <div style="display:flex; gap:16px; margin-top:16px; align-items:center;">
+                  <span style="font-size:13px; font-weight:600; color:var(--accent); cursor:pointer;">{{ i.cta }} →</span>
+                  <span style="font-size:13px; font-weight:500; color:var(--text-3); cursor:pointer;">Dismiss</span>
+                </div>
+              </div>
+              <div style="text-align:right; flex-shrink:0; min-width:96px;">
+                <div class="num" style="{{ i.impactStyle }}">{{ i.impact }}</div>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">{{ i.impactSub }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isLoading }}" hint-placeholder-val="">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:18px; padding:22px 24px; box-shadow:var(--shadow);">
+            <div class="sk" style="width:96px; height:14px; margin-bottom:14px;"></div>
+            <div class="sk" style="width:62%; height:18px; margin-bottom:11px;"></div>
+            <div class="sk" style="width:100%; height:12px; margin-bottom:7px;"></div>
+            <div class="sk" style="width:82%; height:12px;"></div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:18px; padding:22px 24px; box-shadow:var(--shadow);">
+            <div class="sk" style="width:80px; height:14px; margin-bottom:14px;"></div>
+            <div class="sk" style="width:54%; height:18px; margin-bottom:11px;"></div>
+            <div class="sk" style="width:94%; height:12px; margin-bottom:7px;"></div>
+            <div class="sk" style="width:70%; height:12px;"></div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:18px; padding:22px 24px; box-shadow:var(--shadow);">
+            <div class="sk" style="width:110px; height:14px; margin-bottom:14px;"></div>
+            <div class="sk" style="width:48%; height:18px; margin-bottom:11px;"></div>
+            <div class="sk" style="width:88%; height:12px;"></div>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="">
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:18px; padding:60px 24px; box-shadow:var(--shadow); text-align:center;">
+            <div style="width:46px; height:46px; border-radius:14px; background:var(--accent-soft); color:var(--accent); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:19px;">✦</div>
+            <div style="font-size:17px; font-weight:600;">You're all caught up</div>
+            <div style="font-size:14px; color:var(--text-2); margin-top:6px; max-width:360px; margin-left:auto; margin-right:auto; line-height:1.55;">No insights need your attention right now. We'll surface overspend, new bills, and savings as they come up.</div>
+          </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- ============ TRANSACTIONS ============ -->
+      <sc-if value="{{ isTransactions }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; gap:10px; margin-bottom:18px; align-items:center;">
+          <div style="flex:1; display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--hairline); border-radius:12px; padding:0 14px; box-shadow:var(--shadow-sm);">
+            <span style="color:var(--text-3); font-size:15px;">⌕</span>
+            <input placeholder="Search merchants, categories, amounts" style="flex:1; border:none; outline:none; background:transparent; font-family:inherit; font-size:14px; color:var(--text); padding:11px 0;">
+          </div>
+          <sc-for list="{{ txFilters }}" as="f" hint-placeholder-count="4">
+            <span style="{{ f.style }}">{{ f.label }}</span>
+          </sc-for>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:20px; box-shadow:var(--shadow); overflow:hidden;">
+          <sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}">
+          <sc-for list="{{ transactions }}" as="t" hint-placeholder-count="9">
+            <div>
+              <sc-if value="{{ t.isHeader }}" hint-placeholder-val="">
+                <div style="padding:14px 24px 8px; font-size:12px; font-weight:600; color:var(--text-3); text-transform:uppercase; letter-spacing:0.03em; background:var(--surface-2);">{{ t.day }}</div>
+              </sc-if>
+              <sc-if value="{{ t.isRow }}" hint-placeholder-val="">
+                <div style="display:flex; align-items:center; gap:14px; padding:13px 24px; border-bottom:1px solid var(--hairline-2);">
+                  <span style="{{ t.logoStyle }}">{{ t.initial }}</span>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:14.5px; font-weight:550;">{{ t.merchant }}</div>
+                    <div style="font-size:12.5px; color:var(--text-3); margin-top:1px;">{{ t.account }}</div>
+                  </div>
+                  <span style="font-size:12px; color:var(--text-2); background:var(--surface-3); padding:4px 11px; border-radius:20px; font-weight:500;">{{ t.category }}</span>
+                  <span class="num" style="{{ t.amtStyle }}">{{ t.amount }}</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          </sc-if>
+          <sc-if value="{{ isLoading }}" hint-placeholder-val="">
+            <sc-for list="{{ skRows }}" as="r" hint-placeholder-count="7">
+              <div style="display:flex; align-items:center; gap:14px; padding:14px 24px; border-bottom:1px solid var(--hairline-2);">
+                <div class="sk" style="width:38px; height:38px; border-radius:11px;"></div>
+                <div style="flex:1;">
+                  <div class="sk" style="width:42%; height:13px; margin-bottom:8px;"></div>
+                  <div class="sk" style="width:24%; height:11px;"></div>
+                </div>
+                <div class="sk" style="width:74px; height:14px;"></div>
+              </div>
+            </sc-for>
+          </sc-if>
+          <sc-if value="{{ isEmpty }}" hint-placeholder-val="">
+            <div style="padding:64px 24px; text-align:center;">
+              <div style="width:46px; height:46px; border-radius:14px; background:var(--surface-3); color:var(--text-3); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:19px;">⌕</div>
+              <div style="font-size:17px; font-weight:600;">No transactions found</div>
+              <div style="font-size:14px; color:var(--text-2); margin-top:6px;">Try clearing filters or a different search term.</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ REWARDS ============ -->
+      <sc-if value="{{ isRewards }}" hint-placeholder-val="">
+      <div style="display:flex; flex-direction:column; gap:22px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:22px;">
+          <!-- Delta status ring -->
+          <div style="background:linear-gradient(155deg,#12203C,#0A1424); border:1px solid rgba(255,255,255,0.08); border-radius:22px; padding:28px 30px; box-shadow:var(--shadow-lg); color:#fff; position:relative; overflow:hidden;">
+            <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 100% 0%, rgba(120,160,255,0.18), transparent 60%);"></div>
+            <div style="position:relative; display:flex; align-items:center; gap:22px; min-width:0;">
+              <svg viewBox="0 0 140 140" width="120" height="120" style="flex-shrink:0;">
+                <circle cx="70" cy="70" r="58" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="12"></circle>
+                <circle cx="70" cy="70" r="58" fill="none" stroke="url(#ringGrad)" stroke-width="12" stroke-linecap="round" transform="rotate(-90 70 70)" stroke-dasharray="{{ rewards.ringDash }}"></circle>
+                <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7FB2FF"></stop><stop offset="100%" stop-color="#C7A2FF"></stop></linearGradient></defs>
+                <text x="70" y="66" text-anchor="middle" fill="#fff" font-size="26" font-weight="700" font-family="Inter" class="num">68%</text>
+                <text x="70" y="86" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="11" font-family="Inter">to Platinum</text>
+              </svg>
+              <div style="min-width:0;">
+                <div style="font-size:12px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:rgba(255,255,255,0.55);">Delta Medallion</div>
+                <div style="font-size:22px; font-weight:680; letter-spacing:-0.02em; margin-top:4px;">Platinum pace</div>
+                <div class="num" style="font-size:13.5px; color:rgba(255,255,255,0.7); margin-top:8px; line-height:1.55;">8,200 / 12,000 MQDs · 3,800 to go. On track by November.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Points balances -->
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:24px 26px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:16px;">
+            <div style="font-size:15px; font-weight:600;">Rewards balances</div>
+            <sc-for list="{{ rewards.points }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div style="{{ p.badgeStyle }}"></div>
+                <div style="flex:1;">
+                  <div style="font-size:14px; font-weight:550;">{{ p.name }}</div>
+                  <div style="font-size:12px; color:var(--text-3);">{{ p.note }}</div>
+                </div>
+                <div class="num" style="font-size:18px; font-weight:640; letter-spacing:-0.02em;">{{ p.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- MQD contributors -->
+        <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:24px 28px; box-shadow:var(--shadow);">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px;">
+            <div style="font-size:15px; font-weight:600;">What's driving your MQDs</div>
+            <div style="font-size:13px; color:var(--text-3);">This qualification year</div>
+          </div>
+          <sc-for list="{{ rewards.drivers }}" as="d" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--hairline-2);">
+              <div style="width:150px; flex-shrink:0;">
+                <div style="font-size:14px; font-weight:550;">{{ d.name }}</div>
+                <div style="font-size:12px; color:var(--text-3);">{{ d.note }}</div>
+              </div>
+              <div style="flex:1; height:10px; border-radius:20px; background:var(--surface-3); overflow:hidden;">
+                <div style="{{ d.barStyle }}"></div>
+              </div>
+              <div class="num" style="width:80px; text-align:right; font-size:15px; font-weight:600;">{{ d.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ DESIGN SYSTEM ============ -->
+      <sc-if value="{{ isSystem }}" hint-placeholder-val="">
+      <div style="display:flex; flex-direction:column; gap:22px; max-width:960px;">
+        <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:26px 28px; box-shadow:var(--shadow);">
+          <div style="font-size:15px; font-weight:600; margin-bottom:18px;">Color</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px;">
+            <sc-for list="{{ sys.colors }}" as="c" hint-placeholder-count="8">
+              <div>
+                <div style="{{ c.swatch }}"></div>
+                <div style="font-size:13px; font-weight:550; margin-top:9px;">{{ c.name }}</div>
+                <div class="num" style="font-size:12px; color:var(--text-3); margin-top:1px;">{{ c.token }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:22px;">
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:26px 28px; box-shadow:var(--shadow);">
+            <div style="font-size:15px; font-weight:600; margin-bottom:20px;">Type scale — Inter</div>
+            <div style="display:flex; flex-direction:column; gap:18px;">
+              <sc-for list="{{ sys.type }}" as="t" hint-placeholder-count="5">
+                <div style="display:flex; align-items:baseline; gap:16px; border-bottom:1px solid var(--hairline-2); padding-bottom:16px;">
+                  <span style="{{ t.style }}">{{ t.sample }}</span>
+                  <span class="num" style="font-size:12px; color:var(--text-3); margin-left:auto; white-space:nowrap;">{{ t.spec }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--hairline); border-radius:22px; padding:26px 28px; box-shadow:var(--shadow);">
+            <div style="font-size:15px; font-weight:600; margin-bottom:20px;">Radius · Shadow · Space</div>
+            <div style="display:flex; flex-direction:column; gap:20px;">
+              <div style="display:flex; gap:12px; align-items:flex-end;">
+                <div style="width:56px; height:44px; background:var(--surface-3); border-radius:8px;"></div>
+                <div style="width:56px; height:44px; background:var(--surface-3); border-radius:14px;"></div>
+                <div style="width:56px; height:44px; background:var(--surface-3); border-radius:22px;"></div>
+                <span style="font-size:12px; color:var(--text-3); margin-bottom:4px;">8 · 14 · 22</span>
+              </div>
+              <div style="display:flex; gap:16px; align-items:center;">
+                <div style="width:60px; height:44px; background:var(--surface); border-radius:12px; box-shadow:var(--shadow-sm);"></div>
+                <div style="width:60px; height:44px; background:var(--surface); border-radius:12px; box-shadow:var(--shadow);"></div>
+                <div style="width:60px; height:44px; background:var(--surface); border-radius:12px; box-shadow:var(--shadow-lg);"></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="height:14px; width:4px; background:var(--accent); border-radius:2px;"></span>
+                <span style="height:14px; width:8px; background:var(--accent); border-radius:2px; opacity:.8;"></span>
+                <span style="height:14px; width:16px; background:var(--accent); border-radius:2px; opacity:.6;"></span>
+                <span style="height:14px; width:24px; background:var(--accent); border-radius:2px; opacity:.45;"></span>
+                <span style="height:14px; width:32px; background:var(--accent); border-radius:2px; opacity:.3;"></span>
+                <span style="font-size:12px; color:var(--text-3); margin-left:8px;">4 · 8 · 16 · 24 · 32 px</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { screen: 'overview', theme: 'light', data: 'ready', open: { Dining: true } };
+
+  money(n, dp) {
+    const s = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: dp || 0, maximumFractionDigits: dp || 0 });
+    return (n < 0 ? '-$' : '$') + s;
+  }
+
+  spark(vals, w, h) {
+    const min = Math.min(...vals), max = Math.max(...vals), rng = (max - min) || 1;
+    const pts = vals.map((v, i) => {
+      const x = (i / (vals.length - 1)) * w;
+      const y = h - ((v - min) / rng) * h;
+      return { x: +x.toFixed(1), y: +y.toFixed(1) };
+    });
+    return pts;
+  }
+
+  areaChart(vals, w, h) {
+    const pts = this.spark(vals, w, h);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + p.x + ' ' + p.y).join(' ');
+    const area = 'M' + pts[0].x + ' ' + h + ' ' + pts.map(p => 'L' + p.x + ' ' + p.y).join(' ') + ' L' + w + ' ' + h + ' Z';
+    return { line, area };
+  }
+
+  chgChip(pct, invert) {
+    const up = pct > 0;
+    const good = invert ? !up : up;
+    const color = pct === 0 ? 'var(--text-3)' : good ? 'var(--pos)' : 'var(--neg)';
+    const bg = pct === 0 ? 'transparent' : good ? 'var(--pos-soft)' : 'var(--neg-soft)';
+    const arrow = pct === 0 ? '' : up ? '↑' : '↓';
+    return {
+      label: (arrow ? arrow + ' ' : '') + Math.abs(pct) + '%',
+      style: `font-size:12.5px; font-weight:600; text-align:right; color:${color}; background:${bg}; padding:3px 8px; border-radius:20px; white-space:nowrap;`
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const t = s.theme;
+
+    // ---- accounts ----
+    const goldChip='repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 5px),repeating-linear-gradient(90deg,rgba(0,0,0,.10) 0 1px,transparent 1px 8px),linear-gradient(135deg,#EBD08A,#B8934A)';
+    const goldChipDk='repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 5px),repeating-linear-gradient(90deg,rgba(0,0,0,.12) 0 1px,transparent 1px 8px),linear-gradient(135deg,#C9A24B,#8A6A2C)';
+    const silverChip='repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 5px),repeating-linear-gradient(90deg,rgba(0,0,0,.08) 0 1px,transparent 1px 8px),linear-gradient(135deg,#D6DAE0,#8E949E)';
+    const lSheen='linear-gradient(103deg,transparent 33%,rgba(255,255,255,.55) 47%,rgba(255,255,255,.12) 53%,transparent 64%)';
+    const dSheen='linear-gradient(103deg,transparent 34%,rgba(255,255,255,.15) 48%,transparent 61%)';
+    const embL='0 1px 0 rgba(255,255,255,.5)', embD='0 1px 2px rgba(0,0,0,.42)';
+    const edgeL='inset 0 1px 1px rgba(255,255,255,.75), inset 0 0 0 1px rgba(255,255,255,.3)';
+    const edgeD='inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px rgba(255,255,255,.06)';
+    const rawAccounts = [
+      { id:'plat', issuer:'Amex', short:'Platinum', type:'Charge card', last4:'1007', bal:-4210, sub:'Balance owed', spark:[30,34,31,40,44,42,50,48,55], up:true, base:'linear-gradient(135deg,#EEF0F3 0%,#C9CED6 40%,#AAB0BA 56%,#D2D6DC 76%,#F0F2F5 100%)', glow:'radial-gradient(120% 90% at 0% 0%,rgba(255,255,255,.55),transparent 55%)', sheen:lSheen, fg:'#33373F', chip:silverChip, emboss:embL, edge:edgeL },
+      { id:'gold', issuer:'Amex', short:'Gold', type:'Charge card', last4:'2004', bal:-2880, sub:'Balance owed', spark:[20,22,25,24,30,28,33,31,29], up:false, base:'linear-gradient(135deg,#F6E7B0 0%,#DCB65F 40%,#B98A3C 57%,#E3C376 78%,#F7EAB8 100%)', glow:'radial-gradient(120% 90% at 0% 0%,rgba(255,250,230,.5),transparent 55%)', sheen:lSheen, fg:'#4A3612', chip:goldChipDk, emboss:embL, edge:edgeL },
+      { id:'delta', issuer:'Amex', short:'Delta Reserve', type:'Co-brand', last4:'3009', bal:-6540, sub:'Balance owed', spark:[40,44,48,46,55,60,58,66,70], up:true, base:'linear-gradient(140deg,#3E568F 0%,#1D2E58 44%,#0C1830 62%,#2B3F76 100%)', glow:'radial-gradient(110% 85% at 100% 0%,rgba(130,170,255,.28),transparent 55%)', sheen:dSheen, fg:'#DCE6FF', chip:goldChip, emboss:embD, edge:edgeD },
+      { id:'csr', issuer:'Chase', short:'Sapphire Reserve', type:'Visa Infinite', last4:'4002', bal:-3120, sub:'Balance owed', spark:[40,39,37,38,34,33,30,31,28], up:false, base:'linear-gradient(140deg,#356AC0 0%,#143263 44%,#0A1F44 62%,#20468C 100%)', glow:'radial-gradient(110% 85% at 100% 0%,rgba(120,170,255,.3),transparent 55%)', sheen:dSheen, fg:'#D6E3FF', chip:goldChip, emboss:embD, edge:edgeD },
+      { id:'prime', issuer:'Chase', short:'Prime Visa', type:'Visa Signature', last4:'5511', bal:-960, sub:'Balance owed', spark:[17,16,14,15,13,14,12,13,11], up:false, base:'linear-gradient(140deg,#5A616B 0%,#2E333B 44%,#191C21 62%,#434952 100%)', glow:'radial-gradient(120% 90% at 0% 0%,rgba(255,255,255,.16),transparent 55%)', sheen:dSheen, fg:'#E6E8EC', chip:silverChip, emboss:embD, edge:edgeD },
+      { id:'cpc', issuer:'Chase', short:'Private Client', type:'Checking', last4:'8890', bal:84320, sub:'Available', spark:[70,72,71,75,78,76,80,82,84], up:true, base:'linear-gradient(140deg,#3C3C45 0%,#171719 44%,#0A0A0C 62%,#2B2B31 100%)', glow:'radial-gradient(120% 90% at 100% 0%,rgba(200,200,215,.14),transparent 55%)', sheen:dSheen, fg:'#F0F0F2', chip:goldChip, emboss:embD, edge:edgeD }
+    ];
+
+    const accounts = rawAccounts.map(a => {
+      const pts = this.spark(a.spark, 120, 30);
+      const last = pts[pts.length - 1];
+      const favorable = a.id === 'cpc' ? a.up : !a.up;
+      const sparkColor = favorable ? 'var(--pos)' : 'var(--neg)';
+      const tile = (h) => `height:${h}px; border-radius:15px; padding:14px; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; color:${a.fg}; text-shadow:${a.emboss}; background:${a.glow}, ${a.sheen}, ${a.base}; box-shadow:${a.edge}, var(--shadow); flex-shrink:0;`;
+      return {
+        ...a,
+        go: () => this.setState({ screen: 'transactions' }),
+        balanceStr: this.money(a.bal),
+        tileStyle: tile(112),
+        tileStyleSm: `width:112px; height:112px; ${tile(112)}`,
+        chipStyle: `width:30px; height:22px; border-radius:5px; background:${a.chip}; box-shadow:inset 0 0 0 1px rgba(0,0,0,.1), inset 0 1px 1px rgba(255,255,255,.4);`,
+        sparkPts: pts.map(p => p.x + ',' + p.y).join(' '),
+        sparkEndX: last.x, sparkEndY: last.y, sparkColor,
+        trend: a.id === 'cpc' ? '↑ 2.4% this month' : (a.up ? '↑ higher than usual' : '↓ lower than usual'),
+        trendStyle: `font-size:12.5px; font-weight:550; margin-top:3px; color:${favorable ? 'var(--pos)' : 'var(--neg)'};`
+      };
+    });
+
+    // ---- overview chart ----
+    const cur = [0,2.1,3.4,5.0,6.2,8.1,9.8,11.2,13.0,14.4,16.1,18.24];
+    const prev = [0,1.8,3.0,4.2,5.4,6.9,8.2,9.6,11.0,12.4,13.8,15.2];
+    const ac = this.areaChart(cur, 320, 92);
+    const pc = this.areaChart(prev, 320, 92);
+
+    const topCatsRaw = [
+      { name:'Housing', spend:6800, pct:100, chg:0 },
+      { name:'Travel', spend:4900, pct:72, chg:8 },
+      { name:'Dining', spend:3120, pct:46, chg:22 },
+      { name:'Groceries', spend:1180, pct:18, chg:3 }
+    ];
+    const topCats = topCatsRaw.map(c => {
+      const chip = this.chgChip(c.chg);
+      return {
+        name: c.name, spend: this.money(c.spend),
+        barStyle: `width:${c.pct}%; height:100%; border-radius:20px; background:linear-gradient(90deg,var(--accent-2),var(--accent)); opacity:${c.name==='Dining'?1:0.72};`,
+        chg: chip.label, chgStyle: chip.style
+      };
+    });
+
+    // ---- categories tree ----
+    const catData = [
+      { name:'Housing', spend:6800, budget:6800, chg:0, subs:[
+        { name:'Rent — via Plastiq', spend:6500, budget:6500, chg:0 },
+        { name:'Utilities', spend:300, budget:250, chg:14 } ] },
+      { name:'Travel', spend:4900, budget:5000, chg:8, subs:[
+        { name:'Flights', spend:2600, budget:2500, chg:12 },
+        { name:'Hotels', spend:1800, budget:2000, chg:-4 },
+        { name:'Rideshare', spend:500, budget:500, chg:6 } ] },
+      { name:'Dining', spend:3120, budget:2500, chg:22, subs:[
+        { name:'Restaurants', spend:1780, budget:1400, chg:19 },
+        { name:'Delivery', spend:840, budget:600, chg:31 },
+        { name:'Coffee', spend:500, budget:500, chg:8 } ] },
+      { name:'Shopping', spend:1540, budget:1800, chg:-12, subs:[
+        { name:'Apparel', spend:920, budget:1000, chg:-8 },
+        { name:'Home', spend:620, budget:800, chg:-16 } ] },
+      { name:'Groceries', spend:1180, budget:1200, chg:3, subs:[
+        { name:'Whole Foods', spend:780, budget:800, chg:2 },
+        { name:'Farmers Market', spend:400, budget:400, chg:5 } ] }
+    ];
+    const categories = catData.map(c => {
+      const chip = this.chgChip(c.chg);
+      const pct = Math.min(100, Math.round(c.spend / c.budget * 100));
+      const over = c.spend > c.budget;
+      return {
+        name: c.name, spend: this.money(c.spend),
+        open: !!s.open[c.name],
+        toggle: () => this.setState(st => ({ open: { ...st.open, [c.name]: !st.open[c.name] } })),
+        caretStyle: `display:inline-block; font-size:16px; color:var(--text-3); transition:transform .2s; transform:rotate(${s.open[c.name]?90:0}deg);`,
+        barStyle: `width:${pct}%; height:100%; border-radius:20px; background:${over?'var(--neg)':'linear-gradient(90deg,var(--accent-2),var(--accent))'};`,
+        budgetStr: this.money(c.spend) + ' / ' + this.money(c.budget),
+        chg: chip.label, chgStyle: chip.style,
+        subs: c.subs.map(sub => {
+          const sc = this.chgChip(sub.chg);
+          return { name: sub.name, spend: this.money(sub.spend), budgetStr: 'of ' + this.money(sub.budget), chg: sc.label, chgStyle: sc.style };
+        })
+      };
+    });
+
+    // ---- insights ----
+    const tagBase = 'font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; padding:2px 8px; border-radius:6px;';
+    const insights = [
+      { tag:'Overspend', time:'Today', tone:'neg', impact:'$620', impactSub:'over budget', title:'Dining is 25% over budget', body:'$3,120 spent of your $2,500 limit, driven by 3 new merchants: Kaya, Cote, and Sushi Nakazawa. Delivery alone is up 31%.', cta:'Set a lower limit' },
+      { tag:'Bill jumped', time:'2d ago', tone:'amber', impact:'+$50', impactSub:'vs last mo.', title:'Utilities rose $50 vs last month', body:'Your electric bill went from $250 to $300. Summer AC usage is the likely cause — still within seasonal norms.', cta:'View bill history' },
+      { tag:'New recurring', time:'3d ago', tone:'accent', impact:'$30', impactSub:'/mo · new', title:'New subscription detected: Whoop', body:'A $30.00 monthly charge on Amex Gold started this month. That brings your subscriptions to $420/mo across 11 services.', cta:'Review subscriptions' },
+      { tag:'Opportunity', time:'This week', tone:'pos', impact:'$180', impactSub:'/mo saved', title:'You have 4 overlapping streaming services', body:'Netflix, Max, Hulu, and Disney+ total $68/mo, plus 2 rarely-used music apps. Consolidating could save about $180 a month.', cta:'See the plan' },
+      { tag:'Almost there', time:'This week', tone:'accent', impact:'$40', impactSub:'to unlock', title:'$40 from your Amex dining credit', body:'Spend $40 more at eligible restaurants this month to unlock the remaining $200 dining statement credit on Amex Gold.', cta:'Find nearby' }
+    ];
+    const toneMap = {
+      neg:['var(--neg)','var(--neg-soft)'], amber:['var(--amber)','var(--amber-soft)'],
+      accent:['var(--accent)','var(--accent-soft)'], pos:['var(--pos)','var(--pos-soft)']
+    };
+    insights.forEach(i => {
+      const [c, bg] = toneMap[i.tone];
+      i.dotStyle = `width:8px; height:8px; border-radius:50%; background:${c}; flex-shrink:0;`;
+      i.tagStyle = `${tagBase} color:${c}; background:${bg};`;
+      i.impactStyle = `font-size:30px; font-weight:680; letter-spacing:-0.03em; color:${c}; line-height:1;`;
+    });
+    const suggestions = ['Where can I cut $500?', 'Compare this month to last', 'Biggest recurring charges', 'How am I tracking to Platinum?'];
+
+    // ---- transactions ----
+    const txDays = [
+      { day:'Today · Jul 8', rows:[
+        { m:'Blue Bottle Coffee', a:'Amex Gold', c:'Coffee', amt:-6.75, init:'B', bg:'#6B7A8F' },
+        { m:'Uber', a:'Sapphire Reserve', c:'Rideshare', amt:-24.30, init:'U', bg:'#1D1D1F' },
+        { m:'Whole Foods Market', a:'Amex Gold', c:'Groceries', amt:-112.44, init:'W', bg:'#1D8F44' } ] },
+      { day:'Yesterday · Jul 7', rows:[
+        { m:'Cote Korean Steakhouse', a:'Amex Gold', c:'Dining', amt:-284.00, init:'C', bg:'#8A3A2C' },
+        { m:'Delta Air Lines', a:'Delta Reserve', c:'Flights', amt:-612.20, init:'D', bg:'#2B3A67' },
+        { m:'Plastiq — Rent', a:'Delta Reserve', c:'Housing', amt:-6500.00, init:'P', bg:'#4A4A52' },
+        { m:'Apple', a:'Sapphire Reserve', c:'Shopping', amt:-9.99, init:'A', bg:'#1D1D1F' } ] },
+      { day:'Jul 5', rows:[
+        { m:'Whoop', a:'Amex Gold', c:'Subscriptions', amt:-30.00, init:'W', bg:'#111' },
+        { m:'Chase — Payment', a:'Private Client', c:'Transfer', amt:2000.00, init:'C', bg:'#1B4D8F' },
+        { m:'Sushi Nakazawa', a:'Amex Platinum', c:'Dining', amt:-196.00, init:'S', bg:'#3A5A99' } ] }
+    ];
+    const transactions = [];
+    txDays.forEach(d => {
+      transactions.push({ isHeader: true, day: d.day });
+      d.rows.forEach(r => {
+        const income = r.amt > 0;
+        transactions.push({
+          isRow: true, merchant: r.m, account: r.a, category: r.c,
+          amount: (income ? '+' : '') + this.money(r.amt, 2),
+          amtStyle: `font-size:14.5px; font-weight:600; width:96px; text-align:right; color:${income ? 'var(--pos)' : 'var(--text)'};`,
+          initial: r.init,
+          logoStyle: `width:38px; height:38px; border-radius:11px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; font-weight:600; background:${r.bg};`
+        });
+      });
+    });
+    const txFilters = [
+      { label:'All' }, { label:'Cards' }, { label:'Dining' }, { label:'This month' }
+    ].map((f, i) => ({ label: f.label, style: `font-size:13px; font-weight:500; padding:10px 14px; border-radius:12px; cursor:pointer; white-space:nowrap; box-shadow:var(--shadow-sm); ${i===0 ? 'color:#fff; background:var(--accent); border:1px solid var(--accent);' : 'color:var(--text-2); background:var(--surface); border:1px solid var(--hairline);'}` }));
+
+    // ---- rewards ----
+    const ringC = 2 * Math.PI * 58;
+    const rewards = {
+      ringDash: (ringC * 0.68).toFixed(1) + ' ' + ringC.toFixed(1),
+      points: [
+        { name:'Amex Membership Rewards', note:'Platinum + Gold', value:'318,400', c:'linear-gradient(135deg,#C9A24B,#E8C77E)' },
+        { name:'Chase Ultimate Rewards', note:'Sapphire Reserve', value:'142,300', c:'linear-gradient(135deg,#1B3B6F,#2E5AAC)' },
+        { name:'Delta SkyMiles', note:'Delta Reserve', value:'96,120', c:'linear-gradient(135deg,#0E1B33,#3A4E8C)' }
+      ].map(p => ({ ...p, badgeStyle: `width:34px; height:34px; border-radius:10px; flex-shrink:0; background:${p.c};` })),
+      drivers: [
+        { name:'Delta Reserve spend', note:'Direct MQD earn', pct:52, value:'4,260' },
+        { name:'Plastiq rent', note:'$6,500/mo routed', pct:28, value:'2,280' },
+        { name:'Amex Platinum flights', note:'Delta bookings', pct:14, value:'1,160' },
+        { name:'Everyday dining', note:'Gold + Reserve', pct:6, value:'500' }
+      ].map(d => ({ ...d, barStyle: `width:${d.pct*1.9}%; height:100%; border-radius:20px; background:linear-gradient(90deg,#3A4E8C,#7FB2FF);` }))
+    };
+
+    // ---- design system ----
+    const sysColors = [
+      { name:'Canvas', token:'--canvas', v:'var(--canvas)', b:true },
+      { name:'Surface', token:'--surface', v:'var(--surface)', b:true },
+      { name:'Text', token:'--text', v:'var(--text)' },
+      { name:'Text 2', token:'--text-2', v:'var(--text-2)' },
+      { name:'Accent', token:'--accent', v:'var(--accent)' },
+      { name:'Positive', token:'--pos', v:'var(--pos)' },
+      { name:'Negative', token:'--neg', v:'var(--neg)' },
+      { name:'Caution', token:'--amber', v:'var(--amber)' }
+    ].map(c => ({ name:c.name, token:c.token, swatch:`height:64px; border-radius:14px; background:${c.v}; ${c.b?'border:1px solid var(--hairline);':''} box-shadow:var(--shadow-sm);` }));
+    const sysType = [
+      { sample:'Display 52 / 680', spec:'52px · -3.5% · 680', style:'font-size:32px; font-weight:680; letter-spacing:-0.035em;' },
+      { sample:'Title 30 / 650', spec:'30px · -3% · 650', style:'font-size:26px; font-weight:650; letter-spacing:-0.03em;' },
+      { sample:'Heading 15 / 600', spec:'15px · 600', style:'font-size:17px; font-weight:600;' },
+      { sample:'Body 14 / 450', spec:'14px · 1.5 lh', style:'font-size:15px; font-weight:450;' },
+      { sample:'Caption 12 / 500', spec:'12px · 500', style:'font-size:13px; font-weight:500; color:var(--text-3);' }
+    ];
+
+    // ---- nav ----
+    const items = [
+      { id:'overview', label:'Overview' },
+      { id:'accounts', label:'Accounts' },
+      { id:'categories', label:'Categories' },
+      { id:'insights', label:'Insights', badge:'5' },
+      { id:'transactions', label:'Transactions' },
+      { id:'rewards', label:'Rewards' },
+      { id:'system', label:'Design system' }
+    ];
+    const nav = items.map(it => {
+      const active = s.screen === it.id;
+      return {
+        label: it.label, badge: it.badge,
+        go: () => this.setState({ screen: it.id }),
+        style: `display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:11px; cursor:pointer; font-size:14px; font-weight:${active?600:500}; color:${active?'var(--text)':'var(--text-2)'}; background:${active?'var(--surface-2)':'transparent'};`,
+        dotStyle: `width:7px; height:7px; border-radius:2px; background:${active?'var(--accent)':'var(--text-3)'}; opacity:${active?1:0.4};`
+      };
+    });
+
+    const titles = {
+      overview:['Good morning, Jordan','Overview'], accounts:['6 accounts','Accounts'],
+      categories:['July spending','Categories'], insights:['Ledger Intelligence','Insights'],
+      transactions:['All activity','Transactions'], rewards:['Status & points','Rewards'],
+      system:['Component spec','Design system']
+    };
+
+    const dataStates = [ {id:'ready',label:'Live'}, {id:'loading',label:'Loading'}, {id:'empty',label:'Empty'} ];
+    const stateTabs = dataStates.map(d => {
+      const on = s.data === d.id;
+      return { label: d.label, go: () => this.setState({ data: d.id }),
+        style: `font-size:12px; font-weight:${on?600:500}; padding:6px 11px; border-radius:8px; cursor:pointer; color:${on?'var(--text)':'var(--text-2)'}; background:${on?'var(--surface)':'transparent'}; box-shadow:${on?'var(--shadow-sm)':'none'};` };
+    });
+    const skRows = [1,2,3,4,5,6,7];
+
+    return {
+      theme: t,
+      stateTabs,
+      isReady: s.data === 'ready', isLoading: s.data === 'loading', isEmpty: s.data === 'empty',
+      skRows,
+      themeLabel: t === 'dark' ? 'Dark mode' : 'Light mode',
+      knobStyle: `position:absolute; top:2px; left:${t==='dark'?'16px':'2px'}; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,0.3);`,
+      toggleTheme: () => this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark' })),
+      nav,
+      eyebrow: titles[s.screen][0],
+      screenTitle: titles[s.screen][1],
+      isOverview: s.screen === 'overview', isAccounts: s.screen === 'accounts',
+      isCategories: s.screen === 'categories', isInsights: s.screen === 'insights',
+      isTransactions: s.screen === 'transactions', isRewards: s.screen === 'rewards',
+      isSystem: s.screen === 'system',
+      goAccounts: () => this.setState({ screen: 'accounts' }),
+      goInsights: () => this.setState({ screen: 'insights' }),
+      accounts,
+      ov: { areaPath: ac.area, linePath: ac.line, prevPath: pc.line, topCats },
+      heroInsightStyle: 'background:linear-gradient(155deg,var(--surface),var(--surface-2)); border:1px solid var(--hairline); border-radius:22px; padding:26px 28px; box-shadow:var(--shadow); display:flex; flex-direction:column; justify-content:center;',
+      categories, insights, suggestions,
+      transactions, txFilters,
+      rewards,
+      sys: { colors: sysColors, type: sysType }
+    };
+  }
+}
+</script>
+</body>
+</html>

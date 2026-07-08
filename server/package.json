@@ -1,0 +1,20 @@
+{
+  "name": "@ledger/server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node src/db/migrate.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
+    "express": "^4.21.2",
+    "jose": "^5.9.6",
+    "node-cron": "^3.0.3",
+    "pg": "^8.13.1",
+    "plaid": "^43.0.0"
+  }
+}
