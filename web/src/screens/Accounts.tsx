@@ -54,7 +54,13 @@ export function Accounts() {
               }}
             >
               <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                <CardTile tier={a.tier} height={112} width={112} small />
+                <CardTile
+                  tier={a.tier}
+                  height={112}
+                  width={112}
+                  small
+                  issuer={a.tier === 'other' ? a.institution_name : undefined}
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em' }}>{a.name}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>

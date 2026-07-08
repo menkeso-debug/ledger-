@@ -219,7 +219,12 @@ export function Overview() {
             const bal = a.type === 'credit' ? -(a.current_balance ?? 0) : (a.available_balance ?? a.current_balance ?? 0);
             return (
               <div key={a.id} onClick={() => go('transactions', { accountId: a.id })} style={{ flex: '0 0 200px', cursor: 'pointer' }}>
-                <CardTile tier={a.tier} last4={a.mask} />
+                <CardTile
+                  tier={a.tier}
+                  last4={a.mask}
+                  issuer={a.tier === 'other' ? a.institution_name : undefined}
+                  title={a.tier === 'other' ? a.name : undefined}
+                />
                 <div style={{ padding: '11px 4px 0' }}>
                   <div className="num" style={{ fontSize: 18, fontWeight: 640, letterSpacing: '-0.02em' }}>{money(bal)}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>

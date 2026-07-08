@@ -1,4 +1,4 @@
-export type Tier = 'plat' | 'gold' | 'delta' | 'csr' | 'prime' | 'cpc';
+export type Tier = 'plat' | 'gold' | 'delta' | 'csr' | 'prime' | 'cpc' | 'capone' | 'other';
 
 export interface Overview {
   netCash: number;

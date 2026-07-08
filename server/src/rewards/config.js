@@ -83,6 +83,14 @@ export const EARN_RATES = {
       t.subcategory === 'Gas' ? 2 : 1,
   },
   cpc: { program: null, label: 'Private Client', rate: () => 0 },
+  // Capital One: default 2x-everything (Venture X). Adjust if it's a Savor
+  // (3x dining/groceries/entertainment, 1x else) or Quicksilver (1.5x flat).
+  capone: {
+    program: 'capone_miles',
+    label: 'Capital One',
+    rate: () => 2,
+  },
+  other: { program: null, label: 'Other card', rate: () => 0 },
 };
 
 // --- Card statement credits -------------------------------------------------

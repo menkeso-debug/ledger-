@@ -123,5 +123,6 @@ export function matchTier({ name, officialName, subtype, type }) {
   if (/gold/.test(hay)) return 'gold';
   if (/sapphire/.test(hay)) return 'csr';
   if (/prime|amazon/.test(hay)) return 'prime';
-  return 'prime'; // graphite default for unmatched cards
+  if (/capital one|venture|savor|quicksilver/.test(hay)) return 'capone';
+  return 'other'; // neutral graphite tile; labels come from the account itself
 }

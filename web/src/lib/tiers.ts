@@ -66,6 +66,18 @@ export const TIER_ART: Record<Tier, TierArt> = {
     glow: 'radial-gradient(120% 90% at 100% 0%,rgba(200,200,215,.14),transparent 55%)',
     sheen: dSheen, fg: '#F0F0F2', chip: goldChip, emboss: embD, edge: edgeD,
   },
+  capone: {
+    issuer: 'Capital One', short: 'Capital One', typeLabel: 'Credit card',
+    base: 'linear-gradient(140deg,#31465F 0%,#16222F 44%,#0B131C 62%,#26394D 100%)',
+    glow: 'radial-gradient(110% 85% at 100% 0%,rgba(150,180,215,.22),transparent 55%)',
+    sheen: dSheen, fg: '#DEE7F0', chip: silverChip, emboss: embD, edge: edgeD,
+  },
+  other: {
+    issuer: 'Card', short: 'Card', typeLabel: 'Credit card',
+    base: 'linear-gradient(140deg,#4A4E56 0%,#26282D 44%,#141519 62%,#383B42 100%)',
+    glow: 'radial-gradient(120% 90% at 0% 0%,rgba(255,255,255,.12),transparent 55%)',
+    sheen: dSheen, fg: '#E4E6EA', chip: silverChip, emboss: embD, edge: edgeD,
+  },
 };
 
 // Program badge gradients (Rewards balances rows)
@@ -73,6 +85,7 @@ export const PROGRAM_BADGES: Record<string, string> = {
   amex_mr: 'linear-gradient(135deg,#C9A24B,#E8C77E)',
   chase_ur: 'linear-gradient(135deg,#1B3B6F,#2E5AAC)',
   delta_skymiles: 'linear-gradient(135deg,#0E1B33,#3A4E8C)',
+  capone_miles: 'linear-gradient(135deg,#13294B,#A6192E)',
 };
 
 // Merchant mark colors — deterministic per merchant initial

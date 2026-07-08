@@ -4,11 +4,14 @@ import type { Tier } from '../lib/types';
 
 // Premium metal card art: glow + sheen + tier base gradient, edge inset + emboss.
 export function CardTile({
-  tier, last4, height = 112, width, small = false,
+  tier, last4, height = 112, width, small = false, issuer, title,
 }: {
   tier: Tier; last4?: string | null; height?: number; width?: number; small?: boolean;
+  issuer?: string | null; title?: string | null;
 }) {
-  const a = TIER_ART[tier];
+  const a = TIER_ART[tier] || TIER_ART.other;
+  const issuerLabel = issuer || a.issuer;
+  const titleLabel = title || a.short;
   const tileStyle: React.CSSProperties = {
     height,
     width,
@@ -32,14 +35,14 @@ export function CardTile({
   return (
     <div style={tileStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{ fontSize: small ? 10 : 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.82 }}>
-          {a.issuer}
+        <span style={{ fontSize: small ? 10 : 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.82, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>
+          {issuerLabel}
         </span>
         <span style={chipStyle} />
       </div>
       {!small && (
         <div>
-          <div style={{ fontSize: 12.5, fontWeight: 500, opacity: 0.9 }}>{a.short}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 500, opacity: 0.9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titleLabel}</div>
           {last4 && (
             <div className="num" style={{ fontSize: 13, opacity: 0.72, marginTop: 2, letterSpacing: '.08em' }}>
               •••• {last4}
