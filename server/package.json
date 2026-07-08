@@ -5,9 +5,9 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "migrate": "node src/db/migrate.js"
+    "start": "node --env-file-if-exists=../.env src/index.js",
+    "dev": "node --env-file-if-exists=../.env --watch src/index.js",
+    "migrate": "node --env-file-if-exists=../.env src/db/migrate.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
