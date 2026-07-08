@@ -26,10 +26,10 @@ export const MQD_DRIVERS = [
     mqd: (t) => t.amount / MQD.deltaFarePerMqd,
   },
   {
-    key: 'plastiq_rent',
-    name: 'Plastiq rent',
+    key: 'rent_routing',
+    name: 'Rent via Melio',
     note: 'Rent routed via Delta Reserve',
-    match: (t) => t.tier === 'delta' && /plastiq/i.test(t.merchant || ''),
+    match: (t) => t.tier === 'delta' && /melio|plastiq/i.test(t.merchant || ''),
     mqd: (t) => t.amount / MQD.cardSpendPerMqd,
   },
   {

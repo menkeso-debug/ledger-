@@ -6,6 +6,7 @@ import { CardTile } from '../components/CardTile';
 import { Sparkline } from '../components/Sparkline';
 import { PlaidLinkButton } from '../components/PlaidLinkButton';
 import { AppleCardImport } from '../components/AppleCardImport';
+import { TIER_ART } from '../lib/tiers';
 
 export function Accounts() {
   const { accounts } = useStore();
@@ -68,7 +69,12 @@ export function Accounts() {
                   issuer={a.tier === 'other' ? a.institution_name : undefined}
                 />
                 <div style={{ flex: 1, minWidth: 150 }}>
-                  <div style={{ fontSize: 'clamp(13.5px,1.4vw,15px)', fontWeight: 600, letterSpacing: '-0.01em', overflowWrap: 'anywhere' }}>{a.name}</div>
+                  <div style={{ fontSize: 'clamp(13.5px,1.4vw,15px)', fontWeight: 600, letterSpacing: '-0.01em', overflowWrap: 'anywhere' }}>
+                    {/* Chase returns generic names — use the pinned tier's real name */}
+                    {/^credit card$/i.test(a.name) && a.tier !== 'other'
+                      ? `${TIER_ART[a.tier].issuer} ${TIER_ART[a.tier].short}`
+                      : a.name}
+                  </div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2, whiteSpace: 'nowrap' }}>
                     {a.subtype ? a.subtype.charAt(0).toUpperCase() + a.subtype.slice(1) : a.type}
                     {a.mask ? <> · •••• {a.mask}</> : null}

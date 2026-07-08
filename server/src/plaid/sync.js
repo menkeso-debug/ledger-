@@ -109,7 +109,12 @@ export async function refreshAccounts(itemUuid, accessToken = null) {
 // /transactions/sync — cursor per item
 // ---------------------------------------------------------------------------
 
-async function upsertTransaction(t, accountIdByPlaidId) {
+export async function loadCategoryOverrides() {
+  const { rows } = await q('SELECT merchant_key, category, subcategory FROM category_overrides');
+  return new Map(rows.map((r) => [r.merchant_key, r]));
+}
+
+async function upsertTransaction(t, accountIdByPlaidId, overrides = null) {
   const accountId = accountIdByPlaidId.get(t.account_id);
   if (!accountId) return; // account not tracked (shouldn't happen)
   const { category, subcategory } = categorize({
@@ -117,7 +122,7 @@ async function upsertTransaction(t, accountIdByPlaidId) {
     name: t.name,
     pfcPrimary: t.personal_finance_category?.primary,
     pfcDetailed: t.personal_finance_category?.detailed,
-  });
+  }, overrides);
   await q(
     `INSERT INTO transactions (account_id, plaid_transaction_id, pending_transaction_id, date, authorized_date,
                                name, merchant_name, amount, iso_currency_code, pending, payment_channel,
@@ -158,6 +163,7 @@ export async function syncItem(itemUuid) {
     [itemUuid]
   );
   const accountIdByPlaidId = new Map(accountRows.map((r) => [r.plaid_account_id, r.id]));
+  const overrides = await loadCategoryOverrides();
 
   let added = 0, modified = 0, removed = 0;
   let hasMore = true;
@@ -177,8 +183,8 @@ export async function syncItem(itemUuid) {
       for (const r of fresh) accountIdByPlaidId.set(r.plaid_account_id, r.id);
     }
 
-    for (const t of data.added) { await upsertTransaction(t, accountIdByPlaidId); added++; }
-    for (const t of data.modified) { await upsertTransaction(t, accountIdByPlaidId); modified++; }
+    for (const t of data.added) { await upsertTransaction(t, accountIdByPlaidId, overrides); added++; }
+    for (const t of data.modified) { await upsertTransaction(t, accountIdByPlaidId, overrides); modified++; }
     for (const r of data.removed) {
       await q(
         'UPDATE transactions SET removed = true, updated_at = now() WHERE plaid_transaction_id = $1',

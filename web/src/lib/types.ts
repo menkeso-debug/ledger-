@@ -4,6 +4,8 @@ export interface Overview {
   netCash: number;
   netCashChange: { amount: number; pct: number | null };
   cardBalancesOwed: number;
+  cardCount: number;
+  creditUtilization: { pct: number; limit: number } | null;
   statementsDue: number;
   spent: { total: number; budget: number };
   spendSeries: { current: { day: number; total: number }[]; previous: { day: number; total: number }[] };

@@ -228,7 +228,7 @@ function Shell() {
         }}
       >
         <Sidebar theme={theme} toggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))} />
-        <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', maxWidth: 1180, margin: '0 auto', width: '100%' }}>
+        <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', maxWidth: 1400, margin: '0 auto', width: '100%' }}>
           <Header />
           <div className="screenpad" style={{ padding: '8px 44px 60px', flex: 1 }}>
             {screen === 'overview' && <Overview />}

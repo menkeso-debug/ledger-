@@ -16,7 +16,8 @@ apiRouter.get('/health', (_req, res) => res.json({ ok: true }));
 apiRouter.get('/overview', async (_req, res, next) => {
   try {
     const [accounts, flow, owed, series, mom, insight] = await Promise.all([
-      q(`SELECT id, name, type, subtype, tier, mask, current_balance::float, available_balance::float
+      q(`SELECT id, name, type, subtype, tier, mask, current_balance::float, available_balance::float,
+                credit_limit::float
          FROM accounts ORDER BY type DESC, name`).then((r) => r.rows),
       netCashFlow(),
       cardBalances(),
@@ -40,11 +41,15 @@ apiRouter.get('/overview', async (_req, res, next) => {
       .map((c) => ({ name: c.category, spend: c.current_spend, momPct: c.mom_pct }));
     const maxCat = Math.max(...topCats.map((c) => c.spend), 1);
 
+    const cards = accounts.filter((a) => a.type === 'credit');
+    const totalLimit = cards.reduce((s, a) => s + (a.credit_limit || 0), 0);
     res.json({
       netCash,
       netCashChange: { amount: flow.net, pct: netCash - flow.net > 0 ? +((flow.net / (netCash - flow.net)) * 100).toFixed(1) : null },
       cardBalancesOwed: owed,
-      statementsDue: owed, // Plaid Transactions doesn't expose statement due dates; total owed shown
+      cardCount: cards.length,
+      creditUtilization: totalLimit > 0 ? { pct: Math.round((owed / totalLimit) * 100), limit: totalLimit } : null,
+      statementsDue: owed, // legacy field
       spent: { total: spent, budget: totalBudget },
       spendSeries: series,
       topCategories: topCats.map((c) => ({ ...c, pct: Math.round((c.spend / maxCat) * 100) })),
@@ -122,6 +127,43 @@ apiRouter.get('/categories', async (_req, res, next) => {
       });
     }
     res.json(out);
+  } catch (err) { next(err); }
+});
+
+// --- Recategorization -------------------------------------------------------
+// Sets the category for one transaction, and (default) saves a merchant rule so
+// every past and future transaction from that merchant follows it.
+
+apiRouter.patch('/transactions/:id/category', async (req, res, next) => {
+  try {
+    const { category, subcategory, apply_to_merchant = true } = req.body || {};
+    if (!category) return res.status(400).json({ error: 'category required' });
+    const sub = subcategory || 'Other';
+
+    const { rows } = await q(
+      `UPDATE transactions SET category = $2, subcategory = $3, updated_at = now()
+       WHERE id = $1 RETURNING COALESCE(merchant_name, name) AS merchant`,
+      [req.params.id, category, sub]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'transaction not found' });
+
+    let retro = 0;
+    if (apply_to_merchant) {
+      const key = rows[0].merchant.trim().toLowerCase();
+      await q(
+        `INSERT INTO category_overrides (merchant_key, category, subcategory)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (merchant_key) DO UPDATE SET category = EXCLUDED.category, subcategory = EXCLUDED.subcategory`,
+        [key, category, sub]
+      );
+      const r = await q(
+        `UPDATE transactions SET category = $2, subcategory = $3, updated_at = now()
+         WHERE lower(COALESCE(merchant_name, name)) = $1`,
+        [key, category, sub]
+      );
+      retro = r.rowCount;
+    }
+    res.json({ ok: true, merchant: rows[0].merchant, category, subcategory: sub, retroactively_updated: retro });
   } catch (err) { next(err); }
 });
 

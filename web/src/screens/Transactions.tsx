@@ -9,6 +9,66 @@ import type { Txn } from '../lib/types';
 
 type Filter = 'all' | 'cards' | 'dining' | 'month';
 
+const CATEGORY_OPTIONS = [
+  'Housing', 'Travel', 'Dining', 'Groceries', 'Shopping', 'Subscriptions',
+  'Transport', 'Health', 'Income', 'Transfer', 'Other',
+];
+
+// Click the category pill to recategorize — saves a merchant rule so all past
+// and future transactions from this merchant follow.
+function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, sub: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const save = async (cat: string) => {
+    if (!cat || cat === txn.category) return setEditing(false);
+    setSaving(true);
+    try {
+      const sub = cat === txn.category ? (txn.subcategory || 'Other') : 'Other';
+      await api.patch(`/api/transactions/${txn.id}/category`, {
+        category: cat, subcategory: sub, apply_to_merchant: true,
+      });
+      onChanged(cat, sub);
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <select
+        autoFocus
+        defaultValue={txn.category || 'Other'}
+        onChange={(e) => save(e.target.value)}
+        onBlur={() => setEditing(false)}
+        style={{
+          fontSize: 12, fontWeight: 500, padding: '4px 8px', borderRadius: 10,
+          border: '1px solid var(--accent)', background: 'var(--surface)', color: 'var(--text)',
+          outline: 'none', fontFamily: 'inherit',
+        }}
+      >
+        {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+      </select>
+    );
+  }
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      title="Click to recategorize (applies to this merchant everywhere)"
+      style={{
+        fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-3)', padding: '4px 11px',
+        borderRadius: 20, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer',
+        border: '1px dashed transparent', opacity: saving ? 0.5 : 1,
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--hairline)')}
+      onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
+    >
+      {saving ? 'Saving…' : (txn.subcategory || txn.category || 'Uncategorized')}
+    </span>
+  );
+}
+
 export function Transactions() {
   const { transactions, accounts } = useStore();
   const { txFilter } = useNav();
@@ -190,11 +250,18 @@ export function Transactions() {
                       </div>
                       <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 1 }}>{t.account_name}</div>
                     </div>
-                    {t.subcategory && (
-                      <span style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-3)', padding: '4px 11px', borderRadius: 20, fontWeight: 500, whiteSpace: 'nowrap' }}>
-                        {t.subcategory}
-                      </span>
-                    )}
+                    <CategoryPill
+                      txn={t}
+                      onChanged={(cat, sub) =>
+                        setRows((prev) =>
+                          prev
+                            ? prev.map((r) =>
+                                r.merchant === t.merchant ? { ...r, category: cat, subcategory: sub } : r
+                              )
+                            : prev
+                        )
+                      }
+                    />
                     <span
                       className="num"
                       style={{

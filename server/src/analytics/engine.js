@@ -48,9 +48,11 @@ export async function computeInsights() {
     count++;
   }
 
-  // 2. Recurring charges: bill jumped + new recurring
+  // 2. Recurring charges: bill jumped + new recurring (bills only — a weekly
+  // restaurant habit is not a subscription)
   const recurring = await recurringCharges();
   for (const r of recurring) {
+    if (!r.is_bill) continue;
     if (r.is_new) {
       await upsertInsight({
         kind: 'new_recurring', tone: 'accent', tag: 'New recurring',
@@ -122,14 +124,17 @@ export async function computeInsights() {
     count++;
   }
 
-  // 6. Streaming overlap opportunity
-  const { rows: streaming } = await q(
+  // 6. Streaming overlap opportunity — only merchants that are actually
+  // recurring subscriptions (one-off theater tickets don't count)
+  const recurringSet = new Set(recurring.filter((r) => r.is_bill).map((r) => r.merchant));
+  const { rows: allStreaming } = await q(
     `SELECT COALESCE(merchant_name, name) AS merchant, SUM(amount)::float AS spend
      FROM transactions t
      WHERE NOT t.removed AND t.amount > 0 AND t.subcategory IN ('Streaming','Music')
        AND t.date >= CURRENT_DATE - interval '35 days'
      GROUP BY 1 ORDER BY spend DESC`
   );
+  const streaming = allStreaming.filter((s) => recurringSet.has(s.merchant));
   if (streaming.length >= 4) {
     const total = streaming.reduce((s, r) => s + r.spend, 0);
     const names = streaming.slice(0, 4).map((r) => r.merchant).join(', ');

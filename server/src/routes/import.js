@@ -4,6 +4,8 @@ import { q } from '../db/pool.js';
 import { encrypt } from '../lib/crypto.js';
 import { log } from '../lib/log.js';
 import { computeInsights } from '../analytics/engine.js';
+import { loadCategoryOverrides } from '../plaid/sync.js';
+import { merchantKey } from '../categories.js';
 
 export const importRouter = Router();
 
@@ -102,6 +104,7 @@ importRouter.post('/apple-card', async (req, res, next) => {
     }
 
     const accountId = await ensureAppleAccount();
+    const overrides = await loadCategoryOverrides();
     let inserted = 0, skipped = 0, failed = 0;
 
     for (const r of rows.slice(1)) {
@@ -115,9 +118,12 @@ importRouter.post('/apple-card', async (req, res, next) => {
       // Ledger/Plaid convention: positive = money out. Purchases are outflows;
       // payments to the card are inflows (and categorized Transfer).
       const amount = isPayment ? -Math.abs(rawAmount) : Math.abs(rawAmount);
+      const override = !isPayment && overrides.get(merchantKey(merchant, description));
       const [category, subcategory] = isPayment
         ? ['Transfer', 'Card payment']
-        : mapAppleCategory(iCategory >= 0 ? r[iCategory] : '');
+        : override
+          ? [override.category, override.subcategory || 'Other']
+          : mapAppleCategory(iCategory >= 0 ? r[iCategory] : '');
 
       const hash = crypto.createHash('sha256')
         .update(`${date}|${merchant}|${description}|${rawAmount}|${type}`)

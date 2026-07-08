@@ -87,15 +87,29 @@ const PRIMARY_MAP = {
   LOAN_PAYMENTS: ['Transfer', 'Loan payments'],
 };
 
-// Merchant-level overrides applied before PFC mapping.
+// Merchant-level overrides applied before PFC mapping. Order matters —
+// first match wins (Whole Foods must precede the generic Amazon rule).
 const MERCHANT_RULES = [
+  { match: /melio/i, to: ['Housing', 'Rent — via Melio'] },
   { match: /plastiq/i, to: ['Housing', 'Rent — via Plastiq'] },
   { match: /delta air|delta.com/i, to: ['Travel', 'Flights'] },
-  { match: /whole foods/i, to: ['Groceries', 'Whole Foods'] },
+  { match: /whole foods|wholefds/i, to: ['Groceries', 'Whole Foods'] },
+  { match: /amazon fresh/i, to: ['Groceries', 'Amazon Fresh'] },
+  { match: /amzn|amazon/i, to: ['Shopping', 'Amazon'] },
   { match: /farmers market/i, to: ['Groceries', 'Farmers Market'] },
 ];
 
-export function categorize({ merchantName, name, pfcPrimary, pfcDetailed }) {
+export function merchantKey(merchantName, name) {
+  return (merchantName || name || '').trim().toLowerCase();
+}
+
+// `overrides` is an optional Map(merchant_key -> {category, subcategory}) of
+// user recategorizations — they beat every built-in rule.
+export function categorize({ merchantName, name, pfcPrimary, pfcDetailed }, overrides = null) {
+  if (overrides) {
+    const o = overrides.get(merchantKey(merchantName, name));
+    if (o) return { category: o.category, subcategory: o.subcategory || 'Other' };
+  }
   const hay = `${merchantName || ''} ${name || ''}`;
   for (const rule of MERCHANT_RULES) {
     if (rule.match.test(hay)) return { category: rule.to[0], subcategory: rule.to[1] };

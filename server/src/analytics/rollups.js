@@ -173,7 +173,7 @@ export async function recurringCharges() {
   const { rows } = await q(
     `WITH tx AS (
        SELECT COALESCE(t.merchant_name, t.name) AS merchant, t.date, t.amount::float AS amount,
-              t.account_id
+              t.account_id, t.category
        FROM transactions t
        WHERE ${SPEND_FILTER} AND t.date >= CURRENT_DATE - interval '13 months'
      ),
@@ -183,6 +183,7 @@ export async function recurringCharges() {
               AVG(amount)::float AS avg_amount,
               COALESCE(STDDEV_POP(amount), 0)::float AS sd_amount,
               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount)::float AS median_amount,
+              MODE() WITHIN GROUP (ORDER BY category) AS category,
               MAX(date) AS last_date,
               MIN(date) AS first_date
        FROM tx GROUP BY merchant
@@ -200,7 +201,7 @@ export async function recurringCharges() {
        SELECT DISTINCT ON (merchant) merchant, amount AS latest_amount, date AS latest_date
        FROM tx ORDER BY merchant, date DESC
      )
-     SELECT s.merchant, s.n, s.avg_amount, s.median_amount, s.first_date, s.last_date,
+     SELECT s.merchant, s.category, s.n, s.avg_amount, s.median_amount, s.first_date, s.last_date,
             g.median_gap, l.latest_amount,
             CASE WHEN s.median_amount > 0
                  THEN ROUND(((l.latest_amount - s.median_amount) / s.median_amount * 100)::numeric)::int
@@ -219,6 +220,8 @@ export async function recurringCharges() {
     ...r,
     monthly_cost: r.median_gap <= 10 ? r.median_amount * 4 : r.median_amount,
     is_new: new Date(r.first_date) >= new Date(Date.now() - 45 * 864e5),
+    // A regular restaurant/grocery habit recurs but is NOT a bill/subscription.
+    is_bill: !['Dining', 'Groceries', 'Shopping', 'Travel', 'Transport'].includes(r.category),
   }));
 }
 
@@ -463,8 +466,11 @@ export async function cashflowProjection() {
   const expectedIncome = nextPaydays.reduce((s, p) => s + p.amount, 0);
 
   // Upcoming recurring bills inside the window, projected from cadence.
+  // Habitual dining/groceries recur too but belong to the discretionary
+  // run-rate, not the bill list.
   const upcomingBills = [];
   for (const r of recurring) {
+    if (!r.is_bill) continue;
     const gap = Math.round(r.median_gap);
     if (!gap || gap < 2) continue;
     let next = new Date(new Date(r.last_date).getTime() + gap * 864e5);
@@ -482,8 +488,9 @@ export async function cashflowProjection() {
   upcomingBills.sort((a, b) => a.date.localeCompare(b.date));
   const recurringTotal = upcomingBills.reduce((s, b) => s + b.amount, 0);
 
-  // Discretionary run-rate: last-60-day spend excluding detected recurring merchants.
-  const recurringMerchants = recurring.map((r) => r.merchant);
+  // Discretionary run-rate: last-60-day spend excluding bill merchants
+  // (dining/grocery habits stay in the run-rate — they're spend, not bills).
+  const recurringMerchants = recurring.filter((r) => r.is_bill).map((r) => r.merchant);
   const { rows } = await q(
     `SELECT COALESCE(SUM(t.amount), 0)::float AS spend
      FROM transactions t

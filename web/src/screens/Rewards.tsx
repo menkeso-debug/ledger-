@@ -8,10 +8,10 @@ import { ProgressRing } from '../components/ProgressRing';
 import type { Rewards as RewardsData } from '../lib/types';
 
 function BalanceRow({
-  program, name, note, balance, onSaved,
+  program, name, note, balance, earnedThisMonth, onSaved,
 }: {
   program: string; name: string; note: string | null; balance: number;
-  onSaved: (b: number) => void;
+  earnedThisMonth: number; onSaved: (b: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(balance));
@@ -34,7 +34,14 @@ function BalanceRow({
     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
       <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: PROGRAM_BADGES[program] || 'var(--surface-3)' }} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 550 }}>{name}</div>
+        <div style={{ fontSize: 14, fontWeight: 550, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {name}
+          {earnedThisMonth > 0 && (
+            <span className="num" style={{ fontSize: 11, fontWeight: 600, color: 'var(--pos)', background: 'var(--pos-soft)', padding: '1px 8px', borderRadius: 20 }}>
+              +{pts(earnedThisMonth)} this mo.
+            </span>
+          )}
+        </div>
         <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{note}</div>
       </div>
       {editing ? (
@@ -123,16 +130,22 @@ export function Rewards() {
             <div style={{ fontSize: 15, fontWeight: 600 }}>Rewards balances</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Manual — click a value to update</div>
           </div>
-          {r.balances.map((b) => (
-            <BalanceRow
-              key={b.program}
-              program={b.program}
-              name={b.display_name}
-              note={b.note}
-              balance={local[b.program] ?? b.balance}
-              onSaved={(n) => setLocal((s) => ({ ...s, [b.program]: n }))}
-            />
-          ))}
+          {r.balances.map((b) => {
+            const earned = r.pointsThisMonth
+              .filter((p) => p.program === b.program)
+              .reduce((s, p) => s + p.points, 0);
+            return (
+              <BalanceRow
+                key={b.program}
+                program={b.program}
+                name={b.display_name}
+                note={b.note}
+                balance={local[b.program] ?? b.balance}
+                earnedThisMonth={earned}
+                onSaved={(n) => setLocal((s) => ({ ...s, [b.program]: n }))}
+              />
+            );
+          })}
         </Panel>
       </div>
 

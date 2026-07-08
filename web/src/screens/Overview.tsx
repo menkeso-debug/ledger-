@@ -57,15 +57,17 @@ function CashFlowPanel() {
         {stat('Projected net', `${cf.net >= 0 ? '+' : '−'}${money(Math.abs(cf.net))}`, cf.net >= 0 ? 'var(--pos)' : 'var(--neg)')}
       </div>
       <div style={{ display: 'flex', gap: 26, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hairline-2)', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: 200 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>Next salary</div>
+        <div style={{ minWidth: 220, flex: 1 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>
+            Expected deposits · {cf.nextPaydays.length} in window
+          </div>
           {nextPay ? (
-            <div style={{ fontSize: 13.5 }}>
-              <span style={{ fontWeight: 550 }}>{nextPay.merchant}</span>
-              <span style={{ color: 'var(--text-2)' }}>
-                {' '}· {new Date(nextPay.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                {' '}· ~{money(nextPay.amount)} ({nextPay.cadence})
-              </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {cf.nextPaydays.slice(0, 6).map((p, i) => (
+                <span key={i} className="num" style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--pos-soft)', padding: '4px 10px', borderRadius: 20 }}>
+                  {p.merchant.length > 22 ? p.merchant.slice(0, 22) + '…' : p.merchant} · {new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ~{money(p.amount)}
+                </span>
+              ))}
             </div>
           ) : (
             <div style={{ fontSize: 13, color: 'var(--text-3)' }}>No income stream detected yet</div>
@@ -139,24 +141,32 @@ export function Overview() {
           </div>
           <div style={{ display: 'flex', gap: 26, marginTop: 26, paddingTop: 20, borderTop: '1px solid var(--hairline-2)' }}>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Card balances owed</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>
+                Owed across {ov?.cardCount ?? '—'} cards
+              </div>
               <div className="num" style={{ fontSize: 19, fontWeight: 600, marginTop: 4 }}>
                 {ov ? money(ov.cardBalancesOwed) : '—'}
               </div>
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Statements due</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <div className="num" style={{ fontSize: 19, fontWeight: 660, color: 'var(--amber)' }}>
-                  {ov ? money(ov.statementsDue) : '—'}
-                </div>
-                {ov && ov.statementsDue > 0 && (
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', padding: '2px 8px', borderRadius: 20 }}>
-                    This cycle
+            {ov?.creditUtilization && (
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Credit utilization</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <div
+                    className="num"
+                    style={{
+                      fontSize: 19, fontWeight: 660,
+                      color: ov.creditUtilization.pct > 30 ? 'var(--amber)' : 'var(--text)',
+                    }}
+                  >
+                    {ov.creditUtilization.pct}%
+                  </div>
+                  <span className="num" style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', background: 'var(--surface-3)', padding: '2px 8px', borderRadius: 20 }}>
+                    of {money(ov.creditUtilization.limit)}
                   </span>
-                )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </Panel>
 
@@ -260,9 +270,16 @@ export function Overview() {
             </>
           ) : ov?.heroInsight ? (
             <>
-              <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.32 }}>
-                {ov.heroInsight.title}{' '}
-                <span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{ov.heroInsight.body}</span>
+              <div style={{ fontSize: 'clamp(17px,1.8vw,21px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.32 }}>
+                {ov.heroInsight.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 14, color: 'var(--text-2)', fontWeight: 450, lineHeight: 1.55, marginTop: 8,
+                  display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                }}
+              >
+                {ov.heroInsight.body}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
                 <FilledButton onClick={() => go('insights')}>See breakdown</FilledButton>
