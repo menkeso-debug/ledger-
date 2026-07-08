@@ -59,6 +59,10 @@ const DETAILED_MAP = {
   ENTERTAINMENT_VIDEO_GAMES: ['Subscriptions', 'Gaming'],
   GENERAL_SERVICES_SUBSCRIPTION: ['Subscriptions', 'Services'],
 
+  // Kids
+  GENERAL_SERVICES_CHILDCARE: ['Kids', 'Childcare'],
+  GENERAL_SERVICES_EDUCATION: ['Kids', 'Education'],
+
   // Health
   MEDICAL_PRIMARY_CARE: ['Health', 'Medical'],
   MEDICAL_DENTAL_CARE: ['Health', 'Dental'],

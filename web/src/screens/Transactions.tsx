@@ -11,7 +11,7 @@ type Filter = 'all' | 'cards' | 'dining' | 'month';
 
 const CATEGORY_OPTIONS = [
   'Housing', 'Travel', 'Dining', 'Groceries', 'Shopping', 'Subscriptions',
-  'Transport', 'Health', 'Income', 'Transfer', 'Other',
+  'Kids', 'Transport', 'Health', 'Income', 'Transfer', 'Other',
 ];
 
 // Click the category pill to recategorize — saves a merchant rule so all past
