@@ -434,18 +434,24 @@ export async function incomeStreams() {
     if (!cadence) continue;
     const amount = median(txns.map((t) => t.amount));
     const lastDate = txns[txns.length - 1].date;
-    // Project forward up to 60 days out
+    // A stream with no deposit in ~2 pay cycles has ended (job change, closed
+    // payout source) — keep it in history but never project paydays from it.
+    const daysSinceLast = Math.round((today - lastDate) / 864e5);
+    const active = daysSinceLast <= gap * 2 + 7;
     const upcoming = [];
-    let next = new Date(lastDate.getTime() + gap * 864e5);
-    while (upcoming.length < 6 && next <= new Date(today.getTime() + 60 * 864e5)) {
-      if (next >= today) upcoming.push({ date: next.toISOString().slice(0, 10), amount });
-      next = new Date(next.getTime() + gap * 864e5);
+    if (active) {
+      let next = new Date(lastDate.getTime() + gap * 864e5);
+      while (upcoming.length < 6 && next <= new Date(today.getTime() + 60 * 864e5)) {
+        if (next >= today) upcoming.push({ date: next.toISOString().slice(0, 10), amount });
+        next = new Date(next.getTime() + gap * 864e5);
+      }
     }
     streams.push({
       merchant, cadence, gapDays: gap,
       typicalAmount: amount,
       lastDate: lastDate.toISOString().slice(0, 10),
       occurrences: txns.length,
+      active,
       upcoming,
     });
   }
