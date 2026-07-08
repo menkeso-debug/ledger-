@@ -42,13 +42,19 @@ apiRouter.get('/overview', async (_req, res, next) => {
     const maxCat = Math.max(...topCats.map((c) => c.spend), 1);
 
     const cards = accounts.filter((a) => a.type === 'credit');
-    const totalLimit = cards.reduce((s, a) => s + (a.credit_limit || 0), 0);
+    // Utilization only over cards that report a limit (Amex charge cards and
+    // manual imports have none — including their balances would overstate).
+    const limited = cards.filter((a) => a.credit_limit > 0);
+    const totalLimit = limited.reduce((s, a) => s + a.credit_limit, 0);
+    const owedOnLimited = limited.reduce((s, a) => s + (a.current_balance || 0), 0);
     res.json({
       netCash,
       netCashChange: { amount: flow.net, pct: netCash - flow.net > 0 ? +((flow.net / (netCash - flow.net)) * 100).toFixed(1) : null },
       cardBalancesOwed: owed,
       cardCount: cards.length,
-      creditUtilization: totalLimit > 0 ? { pct: Math.round((owed / totalLimit) * 100), limit: totalLimit } : null,
+      creditUtilization: totalLimit > 0
+        ? { pct: Math.round((owedOnLimited / totalLimit) * 100), limit: totalLimit }
+        : null,
       statementsDue: owed, // legacy field
       spent: { total: spent, budget: totalBudget },
       spendSeries: series,
