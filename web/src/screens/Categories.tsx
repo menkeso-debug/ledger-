@@ -166,6 +166,8 @@ export function Categories() {
   const [open, setOpen] = useState<Record<string, boolean>>({ Dining: true });
 
   return (
+    <div>
+    <BudgetAdvisor />
     <Panel style={{ overflow: 'hidden' }}>
       {/* Header row */}
       <div
@@ -230,16 +232,7 @@ export function Categories() {
                 {money(c.spend)}
               </span>
               <div className="catbudget">
-                {c.budget != null ? (
-                  <>
-                    <Bar pct={pct} over={over} width={120} />
-                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 5 }}>
-                      {money(c.spend)} / {money(c.budget)}
-                    </div>
-                  </>
-                ) : (
-                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>No budget</span>
-                )}
+                <BudgetCell category={c.name} spend={c.spend} budget={c.budget} />
               </div>
               <span style={{ textAlign: 'right' }}>
                 <ChangeChip pct={c.momPct} invert />
@@ -271,5 +264,6 @@ export function Categories() {
         );
       })}
     </Panel>
+    </div>
   );
 }
