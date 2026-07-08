@@ -133,12 +133,13 @@ importRouter.post('/apple-card', async (req, res, next) => {
       if (result.rowCount) inserted++; else skipped++;
     }
 
-    // Approximate balance owed from the imported ledger (purchases minus payments).
+    // Balance owed = imported ledger sum + manual offset (covers pre-window
+    // balance and installment plans the export never shows).
     await q(
       `UPDATE accounts SET current_balance = (
          SELECT COALESCE(SUM(amount), 0) FROM transactions
          WHERE account_id = $1 AND NOT removed
-       ), balances_updated_at = now()
+       ) + balance_offset, balances_updated_at = now()
        WHERE id = $1`,
       [accountId]
     );
