@@ -3,7 +3,7 @@ import { q } from '../db/pool.js';
 import { config } from '../config.js';
 import {
   categoryMoM, subcategoryMoM, netCashFlow, dailySpendSeries,
-  accountSparkSeries, cardBalances,
+  accountSparkSeries, cardBalances, cashflowProjection,
 } from '../analytics/rollups.js';
 
 export const apiRouter = Router();
@@ -49,6 +49,14 @@ apiRouter.get('/overview', async (_req, res, next) => {
       accountCount: accounts.length,
       hasData: accounts.length > 0,
     });
+  } catch (err) { next(err); }
+});
+
+// --- 30-day cash flow projection ---------------------------------------------
+
+apiRouter.get('/cashflow', async (_req, res, next) => {
+  try {
+    res.json(await cashflowProjection());
   } catch (err) { next(err); }
 });
 
@@ -122,11 +130,12 @@ apiRouter.post('/insights/:id/dismiss', async (req, res, next) => {
 
 apiRouter.get('/transactions', async (req, res, next) => {
   try {
-    const { query, category, account_id, month, limit } = req.query;
+    const { query, category, subcategory, account_id, month, limit } = req.query;
     const params = [];
     const where = ['NOT t.removed'];
     if (query) { params.push(`%${query}%`); where.push(`(t.merchant_name ILIKE $${params.length} OR t.name ILIKE $${params.length})`); }
     if (category) { params.push(category); where.push(`t.category = $${params.length}`); }
+    if (subcategory) { params.push(subcategory); where.push(`t.subcategory = $${params.length}`); }
     if (account_id) { params.push(account_id); where.push(`t.account_id = $${params.length}`); }
     if (month) { params.push(`${month}-01`); where.push(`t.date >= $${params.length}::date AND t.date < ($${params.length}::date + interval '1 month')`); }
     params.push(Math.min(Number(limit) || 100, 500));

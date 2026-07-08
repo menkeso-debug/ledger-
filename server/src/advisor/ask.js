@@ -4,7 +4,7 @@ import { config } from '../config.js';
 import { q } from '../db/pool.js';
 import {
   categoryMoM, subcategoryMoM, merchantMoM, recurringCharges,
-  categoryBaselines, netCashFlow, categorySpendForMonth,
+  categoryBaselines, netCashFlow, categorySpendForMonth, cashflowProjection,
 } from '../analytics/rollups.js';
 import { rewardsSummary } from '../rewards/engine.js';
 
@@ -99,6 +99,13 @@ const tools = [
       additionalProperties: false,
     },
     run: async ({ min_spend }) => asJson(await merchantMoM(min_spend ?? 100)),
+  }),
+  betaTool({
+    name: 'cash_flow_projection',
+    description:
+      '30-day forward cash flow: detected income streams (salary cadence + predicted next paydays), upcoming recurring bills, discretionary run-rate, projected spend vs expected income, and whether the user is on track.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    run: async () => asJson(await cashflowProjection()),
   }),
   betaTool({
     name: 'rewards_state',

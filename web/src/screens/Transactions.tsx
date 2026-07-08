@@ -15,13 +15,17 @@ export function Transactions() {
   const [search, setSearch] = useState(txFilter.query || '');
   const [filter, setFilter] = useState<Filter>('all');
   const [accountId, setAccountId] = useState<string | undefined>(txFilter.accountId);
+  const [category, setCategory] = useState<string | undefined>(txFilter.category);
+  const [subcategory, setSubcategory] = useState<string | undefined>(txFilter.subcategory);
   const [rows, setRows] = useState<Txn[] | null>(transactions.data);
   const [loading, setLoading] = useState(transactions.status === 'loading');
 
   useEffect(() => {
     setAccountId(txFilter.accountId);
     setSearch(txFilter.query || '');
-  }, [txFilter.accountId, txFilter.query]);
+    setCategory(txFilter.category);
+    setSubcategory(txFilter.subcategory);
+  }, [txFilter.accountId, txFilter.query, txFilter.category, txFilter.subcategory]);
 
   // Server-side fetch when filters change (keeps results correct beyond the cached page).
   useEffect(() => {
@@ -30,7 +34,9 @@ export function Transactions() {
       try {
         const params = new URLSearchParams({ limit: '200' });
         if (search.trim()) params.set('query', search.trim());
-        if (filter === 'dining') params.set('category', 'Dining');
+        if (category) params.set('category', category);
+        else if (filter === 'dining') params.set('category', 'Dining');
+        if (subcategory) params.set('subcategory', subcategory);
         if (filter === 'month') params.set('month', new Date().toISOString().slice(0, 7));
         if (accountId) params.set('account_id', accountId);
         const data = await api.get<Txn[]>(`/api/transactions?${params.toString()}`);
@@ -42,7 +48,7 @@ export function Transactions() {
       }
     }, search ? 250 : 0);
     return () => clearTimeout(t);
-  }, [search, filter, accountId]);
+  }, [search, filter, accountId, category, subcategory]);
 
   const grouped = useMemo(() => {
     const byDay = new Map<string, Txn[]>();
@@ -101,6 +107,19 @@ export function Transactions() {
             </span>
           );
         })}
+        {category && (
+          <span
+            onClick={() => { setCategory(undefined); setSubcategory(undefined); }}
+            style={{
+              fontSize: 13, fontWeight: 500, padding: '10px 14px', borderRadius: 12,
+              cursor: 'pointer', color: 'var(--accent)', background: 'var(--accent-soft)',
+              border: '1px solid transparent', userSelect: 'none',
+            }}
+            title="Clear category filter"
+          >
+            {category}{subcategory ? ` · ${subcategory}` : ''} ✕
+          </span>
+        )}
         {accountName && (
           <span
             onClick={() => setAccountId(undefined)}

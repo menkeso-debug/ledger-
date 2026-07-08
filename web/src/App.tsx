@@ -10,10 +10,17 @@ import { Rewards } from './screens/Rewards';
 
 export type ScreenId = 'overview' | 'accounts' | 'categories' | 'insights' | 'transactions' | 'rewards';
 
+export interface TxFilter {
+  accountId?: string;
+  query?: string;
+  category?: string;
+  subcategory?: string;
+}
+
 export interface Nav {
   screen: ScreenId;
-  go: (s: ScreenId, opts?: { accountId?: string; query?: string }) => void;
-  txFilter: { accountId?: string; query?: string };
+  go: (s: ScreenId, opts?: TxFilter) => void;
+  txFilter: TxFilter;
 }
 
 const NavCtx = React.createContext<Nav | null>(null);
@@ -189,7 +196,7 @@ function Shell() {
   const [screen, setScreen] = useState<ScreenId>(() =>
     window.location.search.includes('oauth_state_id') ? 'accounts' : 'overview'
   );
-  const [txFilter, setTxFilter] = useState<{ accountId?: string; query?: string }>({});
+  const [txFilter, setTxFilter] = useState<TxFilter>({});
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored = localStorage.getItem('ledger-theme');
     if (stored === 'dark' || stored === 'light') return stored;

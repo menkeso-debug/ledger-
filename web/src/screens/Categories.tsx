@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
+import { useNav } from '../App';
 import { money } from '../lib/format';
 import { Panel, ChangeChip, Sk, EmptyState, Bar } from '../components/ui';
 
@@ -9,6 +10,7 @@ const GRID: React.CSSProperties = {
 
 export function Categories() {
   const { categories } = useStore();
+  const { go } = useNav();
   const [open, setOpen] = useState<Record<string, boolean>>({ Dining: true });
 
   return (
@@ -67,7 +69,14 @@ export function Categories() {
                 <span style={{ width: 9, height: 9, borderRadius: 3, background: 'var(--text-3)', opacity: 0.5 }} />
                 <span style={{ fontSize: 15, fontWeight: 600 }}>{c.name}</span>
               </div>
-              <span className="num" style={{ fontSize: 15, fontWeight: 600, textAlign: 'right' }}>{money(c.spend)}</span>
+              <span
+                className="num"
+                title={`See ${c.name} transactions`}
+                onClick={(e) => { e.stopPropagation(); go('transactions', { category: c.name }); }}
+                style={{ fontSize: 15, fontWeight: 600, textAlign: 'right', cursor: 'pointer', textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: 'var(--hairline)', textUnderlineOffset: 3 }}
+              >
+                {money(c.spend)}
+              </span>
               <div className="catbudget">
                 {c.budget != null ? (
                   <>
@@ -90,9 +99,11 @@ export function Categories() {
                   <div
                     key={s.name}
                     className="catgrid"
-                    style={{ ...GRID, padding: '13px 24px 13px 60px', borderBottom: '1px solid var(--hairline-2)' }}
+                    onClick={() => go('transactions', { category: c.name, subcategory: s.name })}
+                    title={`See ${s.name} transactions`}
+                    style={{ ...GRID, padding: '13px 24px 13px 60px', borderBottom: '1px solid var(--hairline-2)', cursor: 'pointer' }}
                   >
-                    <span style={{ fontSize: 14, color: 'var(--text-2)', fontWeight: 450 }}>{s.name}</span>
+                    <span style={{ fontSize: 14, color: 'var(--text-2)', fontWeight: 450 }}>{s.name} <span style={{ color: 'var(--text-3)' }}>›</span></span>
                     <span className="num" style={{ fontSize: 14, fontWeight: 500, textAlign: 'right', color: 'var(--text-2)' }}>
                       {money(s.spend)}
                     </span>

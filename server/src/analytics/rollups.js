@@ -365,6 +365,130 @@ export async function accountSparkSeries() {
   return result;
 }
 
+// --- Income streams & 30-day cash flow projection ---------------------------
+
+const classifyCadence = (gap) => {
+  if (gap >= 5 && gap <= 9) return 'weekly';
+  if (gap >= 11 && gap <= 18) return 'biweekly';
+  if (gap >= 26 && gap <= 35) return 'monthly';
+  return null;
+};
+
+// Detect recurring income deposits (salary etc.): regular inflows on checking.
+// Predicts upcoming pay dates from median cadence.
+export async function incomeStreams() {
+  const { rows } = await q(
+    `SELECT COALESCE(t.merchant_name, t.name) AS merchant, t.date, (-t.amount)::float AS amount
+     FROM transactions t
+     JOIN accounts a ON a.id = t.account_id
+     WHERE NOT t.removed AND a.type = 'depository' AND t.amount < 0
+       AND t.category = 'Income'
+       AND t.date >= CURRENT_DATE - interval '7 months'
+     ORDER BY merchant, t.date`
+  );
+  const byMerchant = new Map();
+  for (const r of rows) {
+    if (!byMerchant.has(r.merchant)) byMerchant.set(r.merchant, []);
+    byMerchant.get(r.merchant).push(r);
+  }
+
+  const median = (arr) => {
+    const s = [...arr].sort((a, b) => a - b);
+    return s.length ? s[Math.floor(s.length / 2)] : 0;
+  };
+
+  const streams = [];
+  const today = new Date(new Date().toISOString().slice(0, 10));
+  for (const [merchant, txns] of byMerchant) {
+    if (txns.length < 2) continue;
+    const gaps = [];
+    for (let i = 1; i < txns.length; i++) {
+      gaps.push(Math.round((txns[i].date - txns[i - 1].date) / 864e5));
+    }
+    const gap = median(gaps.filter((g) => g > 0));
+    const cadence = classifyCadence(gap);
+    if (!cadence) continue;
+    const amount = median(txns.map((t) => t.amount));
+    const lastDate = txns[txns.length - 1].date;
+    // Project forward up to 60 days out
+    const upcoming = [];
+    let next = new Date(lastDate.getTime() + gap * 864e5);
+    while (upcoming.length < 6 && next <= new Date(today.getTime() + 60 * 864e5)) {
+      if (next >= today) upcoming.push({ date: next.toISOString().slice(0, 10), amount });
+      next = new Date(next.getTime() + gap * 864e5);
+    }
+    streams.push({
+      merchant, cadence, gapDays: gap,
+      typicalAmount: amount,
+      lastDate: lastDate.toISOString().slice(0, 10),
+      occurrences: txns.length,
+      upcoming,
+    });
+  }
+  return streams.sort((a, b) => b.typicalAmount - a.typicalAmount);
+}
+
+// 30-day forward projection: expected income (from detected streams) vs projected
+// spend (upcoming recurring bills + discretionary run-rate from the last 60 days).
+export async function cashflowProjection() {
+  const [streams, recurring] = await Promise.all([incomeStreams(), recurringCharges()]);
+  const today = new Date(new Date().toISOString().slice(0, 10));
+  const horizon = new Date(today.getTime() + 30 * 864e5);
+
+  const nextPaydays = streams
+    .flatMap((s) => s.upcoming.map((u) => ({ ...u, merchant: s.merchant, cadence: s.cadence })))
+    .filter((u) => new Date(u.date) <= horizon)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const expectedIncome = nextPaydays.reduce((s, p) => s + p.amount, 0);
+
+  // Upcoming recurring bills inside the window, projected from cadence.
+  const upcomingBills = [];
+  for (const r of recurring) {
+    const gap = Math.round(r.median_gap);
+    if (!gap || gap < 2) continue;
+    let next = new Date(new Date(r.last_date).getTime() + gap * 864e5);
+    while (next <= horizon && upcomingBills.length < 200) {
+      if (next >= today) {
+        upcomingBills.push({
+          merchant: r.merchant,
+          date: next.toISOString().slice(0, 10),
+          amount: r.median_amount,
+        });
+      }
+      next = new Date(next.getTime() + gap * 864e5);
+    }
+  }
+  upcomingBills.sort((a, b) => a.date.localeCompare(b.date));
+  const recurringTotal = upcomingBills.reduce((s, b) => s + b.amount, 0);
+
+  // Discretionary run-rate: last-60-day spend excluding detected recurring merchants.
+  const recurringMerchants = recurring.map((r) => r.merchant);
+  const { rows } = await q(
+    `SELECT COALESCE(SUM(t.amount), 0)::float AS spend
+     FROM transactions t
+     WHERE ${SPEND_FILTER}
+       AND t.date >= CURRENT_DATE - interval '60 days'
+       AND COALESCE(t.merchant_name, t.name) != ALL($1::text[])`,
+    [recurringMerchants]
+  );
+  const discretionaryRunRate = (rows[0].spend / 60) * 30;
+  const projectedSpend = recurringTotal + discretionaryRunRate;
+  const net = expectedIncome - projectedSpend;
+
+  return {
+    horizonDays: 30,
+    expectedIncome,
+    nextPaydays,
+    incomeStreams: streams,
+    projectedSpend,
+    recurringTotal,
+    discretionaryRunRate,
+    upcomingBills: upcomingBills.slice(0, 12),
+    net,
+    onTrack: net >= 0,
+  };
+}
+
 // Statements due: total owed across credit cards (Plaid Transactions doesn't expose
 // due dates; we surface total card balances owed as the time-sensitive number).
 export async function cardBalances() {

@@ -6,6 +6,90 @@ import { CardTile } from '../components/CardTile';
 import { SpendChart } from '../components/SpendChart';
 import { PlaidLinkButton } from '../components/PlaidLinkButton';
 
+function CashFlowPanel() {
+  const { cashflow } = useStore();
+  if (cashflow.status === 'loading') {
+    return (
+      <Panel style={{ padding: '24px 28px' }}>
+        <Sk w="30%" h={16} style={{ marginBottom: 16 }} />
+        <Sk h={60} />
+      </Panel>
+    );
+  }
+  const cf = cashflow.data;
+  if (!cf || cashflow.status !== 'ready') {
+    return (
+      <Panel style={{ padding: '24px 28px' }}>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Next 30 days</div>
+        <div style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.5 }}>
+          Once your checking account has a couple of salary deposits in history, the pay-cycle
+          detector projects income vs spend for the next 30 days here.
+        </div>
+      </Panel>
+    );
+  }
+  const nextPay = cf.nextPaydays[0];
+  const stat = (label: string, value: string, color?: string) => (
+    <div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>{label}</div>
+      <div className="num" style={{ fontSize: 22, fontWeight: 660, letterSpacing: '-0.02em', marginTop: 4, color: color || 'var(--text)' }}>
+        {value}
+      </div>
+    </div>
+  );
+  return (
+    <Panel style={{ padding: '24px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 600 }}>Next 30 days</div>
+        <span
+          style={{
+            fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
+            color: cf.onTrack ? 'var(--pos)' : 'var(--neg)',
+            background: cf.onTrack ? 'var(--pos-soft)' : 'var(--neg-soft)',
+          }}
+        >
+          {cf.onTrack ? 'On trajectory' : 'Spending over income'}
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 18 }}>
+        {stat('Expected income', money(cf.expectedIncome))}
+        {stat('Projected spend', money(cf.projectedSpend))}
+        {stat('Projected net', `${cf.net >= 0 ? '+' : '−'}${money(Math.abs(cf.net))}`, cf.net >= 0 ? 'var(--pos)' : 'var(--neg)')}
+      </div>
+      <div style={{ display: 'flex', gap: 26, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hairline-2)', flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 200 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>Next salary</div>
+          {nextPay ? (
+            <div style={{ fontSize: 13.5 }}>
+              <span style={{ fontWeight: 550 }}>{nextPay.merchant}</span>
+              <span style={{ color: 'var(--text-2)' }}>
+                {' '}· {new Date(nextPay.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                {' '}· ~{money(nextPay.amount)} ({nextPay.cadence})
+              </span>
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>No income stream detected yet</div>
+          )}
+        </div>
+        {cf.upcomingBills.length > 0 && (
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>
+              Upcoming bills · {money(cf.recurringTotal)} + {money(cf.discretionaryRunRate)} everyday run-rate
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {cf.upcomingBills.slice(0, 5).map((b, i) => (
+                <span key={i} className="num" style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-3)', padding: '4px 10px', borderRadius: 20 }}>
+                  {b.merchant} · {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {money(b.amount)}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
 export function Overview() {
   const { overview, accounts, briefing } = useStore();
   const { go } = useNav();
@@ -112,6 +196,9 @@ export function Overview() {
         </Panel>
       </div>
 
+      {/* ---- 30-day cash flow projection ---- */}
+      <CashFlowPanel />
+
       {/* ---- Card tiles row ---- */}
       <div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 13 }}>
@@ -192,7 +279,12 @@ export function Overview() {
           {overview.status === 'loading' &&
             [1, 2, 3, 4].map((i) => <Sk key={i} h={40} style={{ marginTop: 11 }} />)}
           {ov?.topCategories.map((c) => (
-            <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: '1px solid var(--hairline-2)' }}>
+            <div
+              key={c.name}
+              onClick={() => go('transactions', { category: c.name })}
+              title={`See ${c.name} transactions`}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: '1px solid var(--hairline-2)', cursor: 'pointer' }}
+            >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <span style={{ fontSize: 14, fontWeight: 500 }}>{c.name}</span>

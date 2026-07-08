@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from './lib/api';
-import type { Overview, Account, Category, Insight, Txn, Rewards, Briefing } from './lib/types';
+import type { Overview, Account, Category, Insight, Txn, Rewards, Briefing, CashFlow } from './lib/types';
 
 export type Status = 'loading' | 'ready' | 'empty' | 'error';
 export interface Domain<T> { status: Status; data: T | null; }
@@ -13,6 +13,7 @@ interface Store {
   transactions: Domain<Txn[]>;
   rewards: Domain<Rewards>;
   briefing: Domain<Briefing>;
+  cashflow: Domain<CashFlow>;
   refresh: () => Promise<void>;
   syncNow: () => Promise<void>;
   dismissInsight: (id: string) => Promise<void>;
@@ -43,6 +44,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<Domain<Txn[]>>(loading);
   const [rewards, setRewards] = useState<Domain<Rewards>>(loading);
   const [briefing, setBriefing] = useState<Domain<Briefing>>(loading);
+  const [cashflow, setCashflow] = useState<Domain<CashFlow>>(loading);
   const [syncing, setSyncing] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -68,6 +70,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       api.get<Briefing | null>('/api/advisor/briefing')
         .then((d) => setBriefing(d ? { status: 'ready', data: d } : { status: 'empty', data: null }))
         .catch(() => setBriefing({ status: 'error', data: null })),
+      api.get<CashFlow>('/api/cashflow')
+        .then((d) => setCashflow(domainState(d, (x) => x.expectedIncome === 0 && x.projectedSpend === 0)))
+        .catch(() => setCashflow({ status: 'error', data: null })),
     ]);
   }, []);
 
@@ -102,7 +107,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [accounts.data]);
 
   const value: Store = {
-    overview, accounts, categories, insights, transactions, rewards, briefing,
+    overview, accounts, categories, insights, transactions, rewards, briefing, cashflow,
     refresh, syncNow, dismissInsight, syncedAt, syncing,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

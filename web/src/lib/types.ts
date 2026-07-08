@@ -82,6 +82,23 @@ export interface Rewards {
   balances: { program: string; display_name: string; note: string | null; balance: number; updated_at: string }[];
 }
 
+export interface CashFlow {
+  horizonDays: number;
+  expectedIncome: number;
+  nextPaydays: { date: string; amount: number; merchant: string; cadence: string }[];
+  incomeStreams: {
+    merchant: string; cadence: string; gapDays: number; typicalAmount: number;
+    lastDate: string; occurrences: number;
+    upcoming: { date: string; amount: number }[];
+  }[];
+  projectedSpend: number;
+  recurringTotal: number;
+  discretionaryRunRate: number;
+  upcomingBills: { merchant: string; date: string; amount: number }[];
+  net: number;
+  onTrack: boolean;
+}
+
 export interface Briefing {
   id: string;
   content: string;
