@@ -11,6 +11,8 @@ const GRID: React.CSSProperties = {
 
 interface BudgetProposal {
   summary: string;
+  income_reasoning: string;
+  income_breakdown: { source: string; cadence: string; per_deposit: number; monthly_equivalent: number }[];
   monthly_income_estimate: number;
   total_budget: number;
   budgets: { category: string; monthly_budget: number; rationale: string }[];
@@ -73,6 +75,25 @@ function BudgetAdvisor() {
               income ~{money(proposal.monthly_income_estimate)}/mo · total budget {money(proposal.total_budget)}
             </span>
           </div>
+          {/* Income derivation — the basis the user is approving */}
+          <div style={{ background: 'var(--surface-2)', border: '1px solid var(--hairline-2)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 8 }}>
+              How income was calculated
+            </div>
+            {proposal.income_breakdown?.map((s, i) => (
+              <div key={i} className="num" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, padding: '4px 0', color: 'var(--text-2)' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.source} · {money(s.per_deposit)} {s.cadence}
+                </span>
+                <span style={{ fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>≈ {money(s.monthly_equivalent)}/mo</span>
+              </div>
+            ))}
+            <div className="num" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingTop: 8, marginTop: 4, borderTop: '1px solid var(--hairline-2)', fontWeight: 600 }}>
+              <span>Monthly income basis</span>
+              <span>{money(proposal.monthly_income_estimate)}</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5, marginTop: 8 }}>{proposal.income_reasoning}</div>
+          </div>
           <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.55, marginBottom: 14 }}>{proposal.summary}</div>
           {proposal.budgets.map((b) => {
             const cur = currentByCat.get(b.category);
@@ -87,6 +108,12 @@ function BudgetAdvisor() {
               </div>
             );
           })}
+          <div className="num" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, fontWeight: 600, padding: '12px 0 0' }}>
+            <span>Total budget {money(proposal.total_budget)} of {money(proposal.monthly_income_estimate)} income</span>
+            <span style={{ color: 'var(--pos)' }}>
+              → {money(Math.max(proposal.monthly_income_estimate - proposal.total_budget, 0))}/mo savings margin
+            </span>
+          </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <FilledButton onClick={apply} disabled={applying}>{applying ? 'Applying…' : 'Apply these budgets'}</FilledButton>
             <OutlineButton onClick={() => setProposal(null)}>Discard</OutlineButton>

@@ -32,11 +32,11 @@ apiRouter.get('/overview', async (_req, res, next) => {
     const { rows: budgetSum } = await q('SELECT COALESCE(SUM(monthly_budget), 0)::float AS total FROM budgets');
     const totalBudget = budgetSum[0].total > 0 ? budgetSum[0].total : config.monthlyBudget;
     const spent = mom
-      .filter((c) => !['Income', 'Transfer'].includes(c.category))
+      .filter((c) => !['Income', 'Transfer', 'Business'].includes(c.category))
       .reduce((s, c) => s + c.current_spend, 0);
 
     const topCats = mom
-      .filter((c) => !['Income', 'Transfer'].includes(c.category))
+      .filter((c) => !['Income', 'Transfer', 'Business'].includes(c.category))
       .slice(0, 4)
       .map((c) => ({ name: c.category, spend: c.current_spend, momPct: c.mom_pct }));
     const maxCat = Math.max(...topCats.map((c) => c.spend), 1);
@@ -118,7 +118,7 @@ apiRouter.get('/categories', async (_req, res, next) => {
         (r) => new Map(r.rows.map((x) => [x.category, x.budget]))
       ),
     ]);
-    const cats = mom.filter((c) => !['Income', 'Transfer'].includes(c.category));
+    const cats = mom.filter((c) => !['Income', 'Transfer', 'Business'].includes(c.category));
     const out = [];
     for (const c of cats) {
       const subs = await subcategoryMoM(c.category);

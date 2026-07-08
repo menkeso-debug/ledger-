@@ -3,7 +3,12 @@ import { q } from '../db/pool.js';
 // All "spend" rollups: outflows (amount > 0), excluding transfers/income/card payments,
 // excluding removed rows. Plaid convention: positive amount = money out.
 
-const SPEND_FILTER = `NOT t.removed AND t.amount > 0 AND t.category NOT IN ('Income','Transfer')`;
+const SPEND_FILTER = `NOT t.removed AND t.amount > 0 AND t.category NOT IN ('Income','Transfer','Business')`;
+
+const median = (arr) => {
+  const s = [...arr].sort((a, b) => a - b);
+  return s.length ? s[Math.floor(s.length / 2)] : 0;
+};
 
 export function monthStart(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
@@ -494,18 +499,24 @@ export async function cashflowProjection() {
   upcomingBills.sort((a, b) => a.date.localeCompare(b.date));
   const recurringTotal = upcomingBills.reduce((s, b) => s + b.amount, 0);
 
-  // Discretionary run-rate: last-60-day spend excluding bill merchants
-  // (dining/grocery habits stay in the run-rate — they're spend, not bills).
+  // Discretionary run-rate: MEDIAN weekly spend over the last 12 full weeks,
+  // excluding bill merchants. Median (not mean) so one-off spikes — a big
+  // purchase, a heavy shopping week — don't dominate the forecast. Adjusts
+  // dynamically: every recategorization or new week reshapes it.
   const recurringMerchants = recurring.filter((r) => r.is_bill).map((r) => r.merchant);
-  const { rows } = await q(
-    `SELECT COALESCE(SUM(t.amount), 0)::float AS spend
+  const { rows: weekly } = await q(
+    `SELECT date_trunc('week', t.date)::date AS wk, SUM(t.amount)::float AS spend
      FROM transactions t
      WHERE ${SPEND_FILTER}
-       AND t.date >= CURRENT_DATE - interval '60 days'
-       AND COALESCE(t.merchant_name, t.name) != ALL($1::text[])`,
+       AND t.date >= (date_trunc('week', CURRENT_DATE) - interval '12 weeks')::date
+       AND t.date < date_trunc('week', CURRENT_DATE)::date
+       AND COALESCE(t.merchant_name, t.name) != ALL($1::text[])
+     GROUP BY 1 ORDER BY 1`,
     [recurringMerchants]
   );
-  const discretionaryRunRate = (rows[0].spend / 60) * 30;
+  const weeklyVals = weekly.map((r) => r.spend);
+  const medianWeekly = median(weeklyVals);
+  const discretionaryRunRate = medianWeekly * (30 / 7);
   const projectedSpend = recurringTotal + discretionaryRunRate;
   const net = expectedIncome - projectedSpend;
 
@@ -517,6 +528,7 @@ export async function cashflowProjection() {
     projectedSpend,
     recurringTotal,
     discretionaryRunRate,
+    runRateBasis: { weeks: weeklyVals.length, medianWeekly: Math.round(medianWeekly) },
     upcomingBills: upcomingBills.slice(0, 12),
     net,
     onTrack: net >= 0,

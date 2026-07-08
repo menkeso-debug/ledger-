@@ -11,12 +11,13 @@ type Filter = 'all' | 'cards' | 'dining' | 'month';
 
 const CATEGORY_OPTIONS = [
   'Housing', 'Travel', 'Dining', 'Groceries', 'Shopping', 'Subscriptions',
-  'Kids', 'Transport', 'Health', 'Income', 'Transfer', 'Other',
+  'Kids', 'Transport', 'Health', 'Business', 'Income', 'Transfer', 'Other',
 ];
 
 // Click the category pill to recategorize — saves a merchant rule so all past
 // and future transactions from this merchant follow.
 function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, sub: string) => void }) {
+  const { refresh } = useStore();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -29,6 +30,8 @@ function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, s
         category: cat, subcategory: sub, apply_to_merchant: true,
       });
       onChanged(cat, sub);
+      // Ripple into Categories / Overview / cash flow without a reload
+      refresh();
     } finally {
       setSaving(false);
       setEditing(false);

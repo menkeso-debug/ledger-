@@ -76,7 +76,8 @@ function CashFlowPanel() {
         {cf.upcomingBills.length > 0 && (
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>
-              Upcoming bills · {money(cf.recurringTotal)} + {money(cf.discretionaryRunRate)} everyday run-rate
+              Bills {money(cf.recurringTotal)} + everyday {money(cf.discretionaryRunRate)}
+              {cf.runRateBasis ? ` (median week ${money(cf.runRateBasis.medianWeekly)} × 4.3, last ${cf.runRateBasis.weeks} wks)` : ''}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {cf.upcomingBills.slice(0, 5).map((b, i) => (

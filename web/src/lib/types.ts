@@ -96,6 +96,7 @@ export interface CashFlow {
   projectedSpend: number;
   recurringTotal: number;
   discretionaryRunRate: number;
+  runRateBasis?: { weeks: number; medianWeekly: number };
   upcomingBills: { merchant: string; date: string; amount: number }[];
   net: number;
   onTrack: boolean;

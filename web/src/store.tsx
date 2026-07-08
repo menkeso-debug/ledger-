@@ -97,6 +97,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // SaaS-style liveness: silent background refetch every 45s (webhook syncs,
+  // backfill, cron insights land without a reload) + refresh when the tab
+  // regains focus. Data swaps in place — no loading flicker, statuses only
+  // change when new responses arrive.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') refresh();
+    }, 45_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [refresh]);
+
   const syncedAt = useMemo(() => {
     const ts = accounts.data
       ?.map((a) => a.balances_updated_at)

@@ -132,7 +132,8 @@ export function categorize({ merchantName, name, pfcPrimary, pfcDetailed }, over
 }
 
 // Categories excluded from "spend" rollups (not real outflow spend).
-export const NON_SPEND_CATEGORIES = ['Income', 'Transfer'];
+// Business = resale/inventory purchases the user runs through personal cards.
+export const NON_SPEND_CATEGORIES = ['Income', 'Transfer', 'Business'];
 
 // Card-art tier matcher: maps a Plaid account to one of the six CardTile tiers.
 export function matchTier({ name, officialName, subtype, type }) {
