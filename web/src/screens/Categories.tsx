@@ -126,12 +126,16 @@ function BudgetAdvisor() {
 
 // North-star strip: total spent vs total budget across all categories.
 function TotalBudgetBar() {
-  const { overview, categories } = useStore();
+  const { overview, categories, cashflow } = useStore();
   const ov = overview.data;
   if (!ov || overview.status !== 'ready') return null;
   const budgeted = (categories.data ?? []).filter((c) => c.budget != null);
   const over = ov.spent.total > ov.spent.budget;
   const pct = Math.min(100, Math.round((ov.spent.total / ov.spent.budget) * 100));
+  // Budgets are static numbers the user applied — if income has since changed
+  // (job change, corrected streams), they can silently exceed it. Flag that.
+  const monthlyIncome = cashflow.data?.expectedIncome ?? null;
+  const budgetOverIncome = monthlyIncome != null && monthlyIncome > 0 && ov.spent.budget > monthlyIncome;
   return (
     <Panel style={{ padding: '18px 24px', marginBottom: 18 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -157,6 +161,12 @@ function TotalBudgetBar() {
           </span>
         </div>
       </div>
+      {budgetOverIncome && (
+        <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--hairline-2)', fontSize: 12.5, color: 'var(--amber)', fontWeight: 500 }}>
+          ⚠ Your total budget ({money(ov.spent.budget)}) exceeds expected monthly income ({money(monthlyIncome!)}).
+          These budgets were set against an older income picture — run “Suggest budgets” below to re-fit them.
+        </div>
+      )}
     </Panel>
   );
 }
@@ -292,7 +302,7 @@ function BudgetCell({ category, spend, budget }: { category: string; spend: numb
 export function Categories() {
   const { categories } = useStore();
   const { go } = useNav();
-  const [open, setOpen] = useState<Record<string, boolean>>({ Dining: true });
+  const [open, setOpen] = useState<Record<string, boolean>>({});
 
   return (
     <div>
