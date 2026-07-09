@@ -173,6 +173,56 @@ apiRouter.patch('/transactions/:id/category', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// --- Category names: list, create, rename -------------------------------------
+// Income/Transfer/Business are load-bearing (excluded from spend math) and
+// Other is the classifier fallback — those four can't be renamed.
+const RESERVED_CATEGORIES = ['Income', 'Transfer', 'Business', 'Other'];
+
+apiRouter.get('/category-names', async (_req, res, next) => {
+  try {
+    const { rows } = await q(
+      `SELECT name FROM (
+         SELECT DISTINCT category AS name FROM transactions WHERE category IS NOT NULL
+         UNION SELECT category FROM budgets
+         UNION SELECT name FROM custom_categories
+       ) u ORDER BY name`
+    );
+    res.json(rows.map((r) => r.name));
+  } catch (err) { next(err); }
+});
+
+apiRouter.post('/category-names', async (req, res, next) => {
+  try {
+    const name = (req.body?.name || '').trim();
+    if (!name || name.length > 40) return res.status(400).json({ error: 'name required (max 40 chars)' });
+    await q('INSERT INTO custom_categories (name) VALUES ($1) ON CONFLICT DO NOTHING', [name]);
+    res.json({ ok: true, name });
+  } catch (err) { next(err); }
+});
+
+apiRouter.post('/category-names/rename', async (req, res, next) => {
+  try {
+    const from = (req.body?.from || '').trim();
+    const to = (req.body?.to || '').trim();
+    if (!from || !to || to.length > 40) return res.status(400).json({ error: 'from and to required (to max 40 chars)' });
+    if (RESERVED_CATEGORIES.includes(from)) {
+      return res.status(400).json({ error: `"${from}" is reserved and can't be renamed` });
+    }
+    const tx = await q(
+      `UPDATE transactions SET category = $2, updated_at = now() WHERE category = $1`,
+      [from, to]
+    );
+    await q('UPDATE category_overrides SET category = $2 WHERE category = $1', [from, to]);
+    // Budgets: move, or merge into an existing target budget
+    const { rows: toBudget } = await q('SELECT 1 FROM budgets WHERE category = $1', [to]);
+    if (toBudget.length) await q('DELETE FROM budgets WHERE category = $1', [from]);
+    else await q('UPDATE budgets SET category = $2 WHERE category = $1', [from, to]);
+    await q('DELETE FROM custom_categories WHERE name = $1', [from]);
+    await q('INSERT INTO custom_categories (name) VALUES ($1) ON CONFLICT DO NOTHING', [to]);
+    res.json({ ok: true, from, to, transactions_moved: tx.rowCount });
+  } catch (err) { next(err); }
+});
+
 // --- Merchant spend nature (constant vs one-off, used by projection) ---------
 
 apiRouter.put('/merchants/flag', async (req, res, next) => {

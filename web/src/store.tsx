@@ -14,6 +14,9 @@ interface Store {
   rewards: Domain<Rewards>;
   briefing: Domain<Briefing>;
   cashflow: Domain<CashFlow>;
+  categoryNames: string[];
+  addCategoryName: (name: string) => Promise<void>;
+  renameCategory: (from: string, to: string) => Promise<void>;
   refresh: () => Promise<void>;
   syncNow: () => Promise<void>;
   dismissInsight: (id: string) => Promise<void>;
@@ -45,6 +48,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [rewards, setRewards] = useState<Domain<Rewards>>(loading);
   const [briefing, setBriefing] = useState<Domain<Briefing>>(loading);
   const [cashflow, setCashflow] = useState<Domain<CashFlow>>(loading);
+  const [categoryNames, setCategoryNames] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -73,8 +77,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       api.get<CashFlow>('/api/cashflow')
         .then((d) => setCashflow(domainState(d, (x) => x.expectedIncome === 0 && x.projectedSpend === 0)))
         .catch(() => setCashflow({ status: 'error', data: null })),
+      api.get<string[]>('/api/category-names')
+        .then(setCategoryNames)
+        .catch(() => {}),
     ]);
   }, []);
+
+  const addCategoryName = useCallback(async (name: string) => {
+    await api.post('/api/category-names', { name });
+    setCategoryNames((prev) => (prev.includes(name) ? prev : [...prev, name].sort()));
+  }, []);
+
+  const renameCategory = useCallback(async (from: string, to: string) => {
+    await api.post('/api/category-names/rename', { from, to });
+    await refresh();
+  }, [refresh]);
 
   const syncNow = useCallback(async () => {
     setSyncing(true);
@@ -126,6 +143,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const value: Store = {
     overview, accounts, categories, insights, transactions, rewards, briefing, cashflow,
+    categoryNames, addCategoryName, renameCategory,
     refresh, syncNow, dismissInsight, syncedAt, syncing,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

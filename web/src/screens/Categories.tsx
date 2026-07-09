@@ -124,6 +124,71 @@ function BudgetAdvisor() {
   );
 }
 
+const RESERVED = ['Income', 'Transfer', 'Business', 'Other'];
+
+// Click a category's name to rename it — moves every transaction, budget,
+// and merchant rule under the new name.
+function CategoryName({ name }: { name: string }) {
+  const { renameCategory } = useStore();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const [saving, setSaving] = useState(false);
+  const reserved = RESERVED.includes(name);
+
+  const save = async () => {
+    const to = value.trim();
+    if (!to || to === name) return setEditing(false);
+    setSaving(true);
+    try {
+      await renameCategory(name, to);
+      setEditing(false);
+    } catch {
+      setValue(name);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setValue(name); setEditing(false); } }}
+        onBlur={save}
+        maxLength={40}
+        style={{
+          fontSize: 15, fontWeight: 600, width: 150,
+          border: '1px solid var(--accent)', borderRadius: 8, padding: '3px 8px',
+          background: 'var(--surface)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      onClick={(e) => {
+        if (reserved) return;
+        e.stopPropagation();
+        setValue(name);
+        setEditing(true);
+      }}
+      title={reserved ? `"${name}" is reserved` : 'Click to rename category'}
+      style={{
+        fontSize: 15, fontWeight: 600, cursor: reserved ? 'default' : 'pointer',
+        borderBottom: reserved ? 'none' : '1px dashed transparent', opacity: saving ? 0.5 : 1,
+      }}
+      onMouseEnter={(e) => { if (!reserved) e.currentTarget.style.borderBottomColor = 'var(--hairline)'; }}
+      onMouseLeave={(e) => (e.currentTarget.style.borderBottomColor = 'transparent')}
+    >
+      {saving ? 'Renaming…' : name}
+    </span>
+  );
+}
+
 function BudgetCell({ category, spend, budget }: { category: string; spend: number; budget: number | null }) {
   const { refresh } = useStore();
   const [editing, setEditing] = useState(false);
@@ -248,7 +313,7 @@ export function Categories() {
                   ›
                 </span>
                 <span style={{ width: 9, height: 9, borderRadius: 3, background: 'var(--text-3)', opacity: 0.5 }} />
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{c.name}</span>
+                <CategoryName name={c.name} />
               </div>
               <span
                 className="num"

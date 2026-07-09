@@ -9,20 +9,29 @@ import type { Txn } from '../lib/types';
 
 type Filter = 'all' | 'cards' | 'dining' | 'month';
 
-const CATEGORY_OPTIONS = [
+const DEFAULT_CATEGORIES = [
   'Housing', 'Travel', 'Dining', 'Groceries', 'Shopping', 'Subscriptions',
-  'Kids', 'Transport', 'Health', 'Business', 'Income', 'Transfer', 'Other',
+  'Kids', 'Transport', 'Health', 'Entertainment', 'Business', 'Income', 'Transfer', 'Other',
 ];
+const NEW_CATEGORY = '__new__';
 
 // Click the category pill to recategorize — saves a merchant rule so all past
 // and future transactions from this merchant follow.
 function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, sub: string) => void }) {
-  const { refresh } = useStore();
+  const { refresh, categoryNames, addCategoryName } = useStore();
   const [editing, setEditing] = useState(false);
   const [flash, setFlash] = useState(false);
 
+  const options = [...new Set([...DEFAULT_CATEGORIES, ...categoryNames])].sort();
+
   const save = async (cat: string) => {
     setEditing(false);
+    if (cat === NEW_CATEGORY) {
+      const name = window.prompt('New category name:')?.trim();
+      if (!name) return;
+      try { await addCategoryName(name); } catch { return; }
+      cat = name;
+    }
     if (!cat || cat === txn.category) return;
     const prevCat = txn.category;
     const prevSub = txn.subcategory;
@@ -55,7 +64,8 @@ function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, s
           outline: 'none', fontFamily: 'inherit',
         }}
       >
-        {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+        {options.map((c) => <option key={c} value={c}>{c}</option>)}
+        <option value={NEW_CATEGORY}>＋ New category…</option>
       </select>
     );
   }
