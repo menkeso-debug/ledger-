@@ -128,6 +128,7 @@ function CashFlowPanel() {
   const { cashflow } = useStore();
   const { go } = useNav();
   const [showAllSteady, setShowAllSteady] = useState(false);
+  const [showAllBills, setShowAllBills] = useState(false);
   if (cashflow.status === 'loading') {
     return (
       <Panel style={{ padding: '24px 28px' }}>
@@ -213,12 +214,24 @@ function CashFlowPanel() {
         />
         <DetailList
           title={`Bills due · ${money(cf.recurringTotal)}`}
-          rows={cf.upcomingBills.slice(0, 5).map((b) => ({
-            label: b.merchant.length > 20 ? b.merchant.slice(0, 20) + '…' : b.merchant,
-            sub: new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            value: money(b.amount),
-          }))}
-          footer={cf.upcomingBills.length > 5 ? `+ ${cf.upcomingBills.length - 5} more` : undefined}
+          rows={[
+            ...(showAllBills ? cf.upcomingBills : cf.upcomingBills.slice(0, 5)).map((b) => ({
+              label: b.merchant.length > 20 ? b.merchant.slice(0, 20) + '…' : b.merchant,
+              sub: new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              value: money(b.amount),
+              onClick: () => go('transactions', { query: b.merchant }),
+            })),
+            ...(cf.upcomingBills.length > 5
+              ? [showAllBills
+                  ? { label: 'Show less', value: '', muted: true, onClick: () => setShowAllBills(false) }
+                  : {
+                      label: `+ ${cf.upcomingBills.length - 5} more`,
+                      value: money(cf.upcomingBills.slice(5).reduce((s, b) => s + b.amount, 0)),
+                      muted: true,
+                      onClick: () => setShowAllBills(true),
+                    }]
+              : []),
+          ]}
           empty="No recurring bills detected"
         />
       </div>
