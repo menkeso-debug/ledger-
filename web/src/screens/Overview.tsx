@@ -6,6 +6,40 @@ import { CardTile } from '../components/CardTile';
 import { SpendChart } from '../components/SpendChart';
 import { PlaidLinkButton } from '../components/PlaidLinkButton';
 
+// Compact list column for the cash-flow panel: label left, tabular value right,
+// hairline rows — same voice as the Top Categories panel.
+function DetailList({
+  title, hint, rows, footer, empty,
+}: {
+  title: string;
+  hint?: string;
+  rows: { label: string; sub?: string; value: string; color?: string; muted?: boolean }[];
+  footer?: string;
+  empty?: string;
+}) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 4 }}>
+        {title}
+        {hint && <span style={{ fontWeight: 450 }}> — {hint}</span>}
+      </div>
+      {rows.length === 0 && <div style={{ fontSize: 13, color: 'var(--text-3)', padding: '8px 0' }}>{empty}</div>}
+      {rows.map((r, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--hairline-2)' }}>
+          <span style={{ fontSize: 13, fontWeight: r.muted ? 450 : 500, color: r.muted ? 'var(--text-3)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+            {r.label}
+            {r.sub && <span style={{ fontSize: 11.5, color: r.color || 'var(--text-3)', fontWeight: 500 }}> · {r.sub}</span>}
+          </span>
+          <span className="num" style={{ fontSize: 13, fontWeight: 600, color: r.color || (r.muted ? 'var(--text-3)' : 'var(--text)'), whiteSpace: 'nowrap' }}>
+            {r.value}
+          </span>
+        </div>
+      ))}
+      {footer && <div style={{ fontSize: 12, color: 'var(--text-3)', paddingTop: 6 }}>{footer}</div>}
+    </div>
+  );
+}
+
 function CashFlowPanel() {
   const { cashflow } = useStore();
   if (cashflow.status === 'loading') {
@@ -56,59 +90,54 @@ function CashFlowPanel() {
         {stat('Projected spend', money(cf.projectedSpend))}
         {stat('Projected net', `${cf.net >= 0 ? '+' : '−'}${money(Math.abs(cf.net))}`, cf.net >= 0 ? 'var(--pos)' : 'var(--neg)')}
       </div>
-      <div style={{ display: 'flex', gap: 26, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hairline-2)', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: 220, flex: 1 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>
-            Expected deposits · {cf.nextPaydays.length} in window
-          </div>
-          {nextPay ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {cf.nextPaydays.slice(0, 6).map((p, i) => (
-                <span key={i} className="num" style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--pos-soft)', padding: '4px 10px', borderRadius: 20 }}>
-                  {p.merchant.length > 22 ? p.merchant.slice(0, 22) + '…' : p.merchant} · {new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ~{money(p.amount)}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>No income stream detected yet</div>
-          )}
-        </div>
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>
-            Bills {money(cf.recurringTotal)} + steady spend {money(cf.discretionaryRunRate)}/mo
-            {cf.projectionBasis ? ` — median month per category, last ${cf.projectionBasis.months} months` : ''}
-          </div>
-          {cf.projectionBasis && cf.projectionBasis.categoryMedians.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-              {cf.projectionBasis.categoryMedians.map((c) => (
-                <span key={c.category} className="num" style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-3)', padding: '4px 10px', borderRadius: 20 }}>
-                  {c.category} {money(c.monthly)}
-                </span>
-              ))}
-              {cf.projectionBasis.pinnedConstants?.map((c) => (
-                <span key={c.merchant} className="num" style={{ fontSize: 12, color: 'var(--accent)', background: 'var(--accent-soft)', padding: '4px 10px', borderRadius: 20 }} title="Pinned as a constant cost">
-                  {c.merchant} {money(c.monthly)} · constant
-                </span>
-              ))}
-            </div>
-          )}
-          {cf.upcomingBills.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-              {cf.upcomingBills.slice(0, 5).map((b, i) => (
-                <span key={i} className="num" style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-3)', padding: '4px 10px', borderRadius: 20 }}>
-                  {b.merchant} · {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {money(b.amount)}
-                </span>
-              ))}
-            </div>
-          )}
-          {cf.projectionBasis && cf.projectionBasis.anomaliesExcluded.length > 0 && (
-            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-              <span style={{ fontWeight: 600, color: 'var(--amber)' }}>One-offs flagged, not baked in: </span>
-              {cf.projectionBasis.anomaliesExcluded.map((a) => `${a.merchant} ${money(a.amount)}`).join(' · ')}
-            </div>
-          )}
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,240px),1fr))', gap: 26, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hairline-2)' }}>
+        <DetailList
+          title={`Deposits · ${cf.nextPaydays.length} expected`}
+          rows={cf.nextPaydays.slice(0, 5).map((p) => ({
+            label: p.merchant.length > 20 ? p.merchant.slice(0, 20) + '…' : p.merchant,
+            sub: new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: `~${money(p.amount)}`,
+            color: 'var(--pos)',
+          }))}
+          empty="No income stream detected yet"
+        />
+        <DetailList
+          title={`Steady spend · ${money(cf.discretionaryRunRate)}/mo`}
+          hint={`median month, last ${cf.projectionBasis?.months ?? 3} months`}
+          rows={[
+            ...(cf.projectionBasis?.categoryMedians.slice(0, 5).map((c) => ({
+              label: c.category, value: money(c.monthly),
+            })) ?? []),
+            ...(cf.projectionBasis?.pinnedConstants?.map((c) => ({
+              label: c.merchant.length > 20 ? c.merchant.slice(0, 20) + '…' : c.merchant,
+              sub: 'constant', value: money(c.monthly), color: 'var(--accent)',
+            })) ?? []),
+            ...((cf.projectionBasis?.categoryMedians.length ?? 0) > 5
+              ? [{
+                  label: `+ ${cf.projectionBasis!.categoryMedians.length - 5} more categories`,
+                  value: money(cf.projectionBasis!.categoryMedians.slice(5).reduce((s, c) => s + c.monthly, 0)),
+                  muted: true,
+                }]
+              : []),
+          ]}
+        />
+        <DetailList
+          title={`Bills due · ${money(cf.recurringTotal)}`}
+          rows={cf.upcomingBills.slice(0, 5).map((b) => ({
+            label: b.merchant.length > 20 ? b.merchant.slice(0, 20) + '…' : b.merchant,
+            sub: new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: money(b.amount),
+          }))}
+          footer={cf.upcomingBills.length > 5 ? `+ ${cf.upcomingBills.length - 5} more` : undefined}
+          empty="No recurring bills detected"
+        />
       </div>
+      {cf.projectionBasis && cf.projectionBasis.anomaliesExcluded.length > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--hairline-2)' }}>
+          <span style={{ fontWeight: 600, color: 'var(--amber)' }}>One-offs flagged, not baked in: </span>
+          {cf.projectionBasis.anomaliesExcluded.map((a) => `${a.merchant} ${money(a.amount)}`).join(' · ')}
+        </div>
+      )}
     </Panel>
   );
 }

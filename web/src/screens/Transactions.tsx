@@ -18,24 +18,38 @@ const NEW_CATEGORY = '__new__';
 // Click the category pill to recategorize — saves a merchant rule so all past
 // and future transactions from this merchant follow.
 function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, sub: string) => void }) {
-  const { refresh, categoryNames, addCategoryName } = useStore();
-  const [editing, setEditing] = useState(false);
+  const { refresh, categoryNames, addCategoryName, categories } = useStore();
+  const [step, setStep] = useState<'closed' | 'cat' | 'sub'>('closed');
+  const [chosenCat, setChosenCat] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
 
   const options = [...new Set([...DEFAULT_CATEGORIES, ...categoryNames])].sort();
+  // Known subcategories for the chosen category, from live data
+  const subsFor = (cat: string) => {
+    const subs = categories.data?.find((c) => c.name === cat)?.subs.map((s) => s.name) ?? [];
+    return [...new Set([...subs, 'Other'])].sort();
+  };
 
-  const save = async (cat: string) => {
-    setEditing(false);
+  const pickCategory = async (cat: string) => {
     if (cat === NEW_CATEGORY) {
       const name = window.prompt('New category name:')?.trim();
-      if (!name) return;
-      try { await addCategoryName(name); } catch { return; }
+      if (!name) return setStep('closed');
+      try { await addCategoryName(name); } catch { return setStep('closed'); }
       cat = name;
     }
-    if (!cat || cat === txn.category) return;
+    if (!cat) return setStep('closed');
+    setChosenCat(cat);
+    setStep('sub'); // step 2: subcategory
+  };
+
+  const commit = async (cat: string, sub: string) => {
+    setStep('closed');
+    if (sub === NEW_CATEGORY) {
+      sub = window.prompt('New subcategory name:')?.trim() || 'Other';
+    }
+    if (cat === txn.category && sub === txn.subcategory) return;
     const prevCat = txn.category;
     const prevSub = txn.subcategory;
-    const sub = 'Other';
     // Optimistic: the pill changes the instant you pick — server catches up behind it.
     onChanged(cat, sub);
     setFlash(true);
@@ -51,22 +65,41 @@ function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, s
     }
   };
 
-  if (editing) {
+  const selectStyle: React.CSSProperties = {
+    fontSize: 12, fontWeight: 500, padding: '4px 8px', borderRadius: 10,
+    border: '1px solid var(--accent)', background: 'var(--surface)', color: 'var(--text)',
+    outline: 'none', fontFamily: 'inherit',
+  };
+
+  if (step === 'cat') {
     return (
       <select
         autoFocus
         defaultValue={txn.category || 'Other'}
-        onChange={(e) => save(e.target.value)}
-        onBlur={() => setEditing(false)}
-        style={{
-          fontSize: 12, fontWeight: 500, padding: '4px 8px', borderRadius: 10,
-          border: '1px solid var(--accent)', background: 'var(--surface)', color: 'var(--text)',
-          outline: 'none', fontFamily: 'inherit',
-        }}
+        onChange={(e) => pickCategory(e.target.value)}
+        onBlur={() => setStep('closed')}
+        style={selectStyle}
       >
         {options.map((c) => <option key={c} value={c}>{c}</option>)}
         <option value={NEW_CATEGORY}>＋ New category…</option>
       </select>
+    );
+  }
+  if (step === 'sub' && chosenCat) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>{chosenCat} ·</span>
+        <select
+          autoFocus
+          defaultValue={chosenCat === txn.category ? (txn.subcategory || 'Other') : 'Other'}
+          onChange={(e) => commit(chosenCat, e.target.value)}
+          onBlur={() => commit(chosenCat, 'Other')}
+          style={selectStyle}
+        >
+          {subsFor(chosenCat).map((s) => <option key={s} value={s}>{s}</option>)}
+          <option value={NEW_CATEGORY}>＋ New subcategory…</option>
+        </select>
+      </span>
     );
   }
   // Show the subcategory when it's meaningful, otherwise the category itself —
@@ -77,7 +110,7 @@ function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, s
       : txn.category || 'Uncategorized';
   return (
     <span
-      onClick={() => setEditing(true)}
+      onClick={() => setStep('cat')}
       title="Click to recategorize (applies to this merchant everywhere)"
       style={{
         fontSize: 12, padding: '4px 11px', borderRadius: 20, fontWeight: flash ? 600 : 500,
