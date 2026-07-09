@@ -17,6 +17,7 @@ import { generateBriefing } from './advisor/briefing.js';
 import { auditCategories } from './advisor/audit.js';
 import { runAlerts, deliverBriefing } from './alerts.js';
 import { snapshotNetWorth } from './routes/api.js';
+import { authRoutes, authGate } from './auth.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webDist = path.resolve(here, '../../web/dist');
@@ -29,6 +30,10 @@ app.use('/api/plaid/webhook', express.raw({ type: '*/*', limit: '1mb' }));
 // CSV imports can be years of statements — allow a larger body on that route only.
 app.use('/api/import', express.json({ limit: '25mb' }));
 app.use(express.json({ limit: '1mb' }));
+
+authRoutes(app);
+app.use('/api', authGate);
+if (!config.password) log.warn('LEDGER_PASSWORD not set — app is open, no password gate');
 
 app.use('/api/plaid', plaidRouter);
 app.use('/api/rewards', rewardsRouter);

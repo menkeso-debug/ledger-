@@ -12,6 +12,8 @@ export const config = {
   databaseUrl: required('DATABASE_URL'),
   // 32-byte key, hex-encoded (64 chars). Generate: node -e "console.log(crypto.randomBytes(32).toString('hex'))"
   encryptionKey: required('LEDGER_ENCRYPTION_KEY'),
+  // App password gate. When unset the app is open (logged at boot).
+  password: process.env.LEDGER_PASSWORD || null,
 
   plaid: {
     clientId: required('PLAID_CLIENT_ID'),

@@ -3,6 +3,11 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
+  // Session cookie expired or was cleared — reload so the lock screen reappears.
+  if (res.status === 401 && !path.startsWith('/api/auth/')) {
+    window.location.reload();
+    await new Promise(() => {}); // reloading — never resolve
+  }
   if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
   return res.json() as Promise<T>;
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { DataProvider, useStore } from './store';
+import { Lock } from './Lock';
 import { greeting, monthName } from './lib/format';
 import { Overview } from './screens/Overview';
 import { Accounts } from './screens/Accounts';
@@ -283,8 +284,10 @@ function Shell() {
 
 export default function App() {
   return (
-    <DataProvider>
-      <Shell />
-    </DataProvider>
+    <Lock>
+      <DataProvider>
+        <Shell />
+      </DataProvider>
+    </Lock>
   );
 }
