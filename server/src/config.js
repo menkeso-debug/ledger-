@@ -33,6 +33,17 @@ export const config = {
     model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
   },
 
+  // Optional council seats — when keys are present, GPT and Gemini join the
+  // advisory council; when absent, those seats fall back to Claude personas.
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || null,
+    model: process.env.OPENAI_MODEL || 'gpt-5-mini',
+  },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || null,
+    model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+  },
+
   // Cron expression for the proactive briefing (server-local time). Default 7:30am daily.
   briefingCron: process.env.BRIEFING_CRON || '30 7 * * *',
   timezone: process.env.LEDGER_TZ || 'America/New_York',

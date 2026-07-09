@@ -32,7 +32,7 @@ function InsightSkeleton({ widths }: { widths: [string, string, string, string?]
 
 interface CouncilResult {
   question: string;
-  members: { id: string; name: string; letter: string; answer: string }[];
+  members: { id: string; name: string; provider?: string; letter: string; answer: string }[];
   reviews: { reviewer: string; review: string }[];
   final: string;
 }
@@ -195,6 +195,9 @@ export function Insights() {
                   }}
                 >
                   {m.name}
+                  {m.provider && (
+                    <span style={{ fontWeight: 450, color: 'var(--text-3)', fontSize: 11 }}> · {m.provider.split(' ')[0]}</span>
+                  )}
                 </span>
               ))}
             </div>
