@@ -341,7 +341,7 @@ apiRouter.get('/transactions', async (req, res, next) => {
     if (month) { params.push(`${month}-01`); where.push(`t.date >= $${params.length}::date AND t.date < ($${params.length}::date + interval '1 month')`); }
     params.push(Math.min(Number(limit) || 100, 500));
     const { rows } = await q(
-      `SELECT t.id, t.date, COALESCE(t.merchant_name, t.name) AS merchant, t.name AS description,
+      `SELECT t.id, t.account_id, t.date, COALESCE(t.merchant_name, t.name) AS merchant, t.name AS description,
               t.amount::float, t.category, t.subcategory, t.pending, a.name AS account_name, a.tier
        FROM transactions t JOIN accounts a ON a.id = t.account_id
        WHERE ${where.join(' AND ')}
@@ -349,6 +349,43 @@ apiRouter.get('/transactions', async (req, res, next) => {
        LIMIT $${params.length}`,
       params
     );
+
+    // Fees and installment charges get traced back to what they're tied to,
+    // so a "PLAN FEE - SAFEBOUND MOVI" row explains itself.
+    for (const r of rows) {
+      const desc = r.description || r.merchant || '';
+      const planFee = desc.match(/^plan fee\s*[-–]\s*(.{4,})$/i);
+      if (planFee) {
+        const frag = planFee[1].trim().replace(/[%_]/g, '');
+        const { rows: origin } = await q(
+          `SELECT COALESCE(merchant_name, name) AS merchant, SUM(amount)::float AS total,
+                  MIN(date) AS first_date, COUNT(*)::int AS n
+           FROM transactions
+           WHERE account_id = $1 AND NOT removed AND amount >= 100
+             AND (merchant_name ILIKE $2 OR name ILIKE $2)
+           GROUP BY 1 ORDER BY total DESC LIMIT 1`,
+          [r.account_id, `${frag}%`]
+        );
+        if (origin.length) {
+          r.linked = {
+            kind: 'plan_fee',
+            merchant: origin[0].merchant,
+            total: origin[0].total,
+            first_date: origin[0].first_date,
+            note: `Installment plan fee (My Chase Plan) for ${origin[0].merchant}`,
+          };
+        } else {
+          r.linked = { kind: 'plan_fee', note: `Installment plan fee for "${frag}"` };
+        }
+      } else if (/purchase interest charge|interest charged/i.test(desc)) {
+        r.linked = { kind: 'interest', note: `Interest on carried balance — ${r.account_name}` };
+      } else if (/annual (membership )?fee/i.test(desc)) {
+        r.linked = { kind: 'annual_fee', note: `Card annual fee — ${r.account_name}` };
+      } else if (/late fee/i.test(desc)) {
+        r.linked = { kind: 'late_fee', note: `Late payment fee — ${r.account_name}` };
+      }
+      delete r.account_id;
+    }
     res.json(rows);
   } catch (err) { next(err); }
 });

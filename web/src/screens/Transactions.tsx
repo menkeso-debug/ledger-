@@ -307,6 +307,17 @@ export function Transactions() {
                         {t.pending && <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}> · pending</span>}
                       </div>
                       <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 1 }}>{t.account_name}</div>
+                      {t.linked && (
+                        <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 3, fontWeight: 500 }}>
+                          ↳ {t.linked.note}
+                          {t.linked.total != null && (
+                            <span className="num" style={{ color: 'var(--text-3)', fontWeight: 450 }}>
+                              {' '}· {money(t.linked.total)} financed
+                              {t.linked.first_date ? ` ${new Date(String(t.linked.first_date).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <CategoryPill
                       txn={t}

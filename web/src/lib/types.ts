@@ -64,6 +64,13 @@ export interface Txn {
   pending: boolean;
   account_name: string;
   tier: Tier;
+  linked?: {
+    kind: 'plan_fee' | 'interest' | 'annual_fee' | 'late_fee';
+    merchant?: string;
+    total?: number;
+    first_date?: string;
+    note: string;
+  };
 }
 
 export interface Rewards {
