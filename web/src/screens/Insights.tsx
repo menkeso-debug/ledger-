@@ -13,9 +13,9 @@ const TONE: Record<string, [string, string]> = {
 };
 
 const SUGGESTIONS = [
-  'Where can I cut $500?',
-  'Compare this month to last',
-  'Biggest recurring charges',
+  'Am I profitable this month?',
+  'What is my debt costing me?',
+  'Where should I cut first?',
   'How am I tracking to Platinum?',
 ];
 

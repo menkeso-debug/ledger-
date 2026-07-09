@@ -116,6 +116,13 @@ export interface CashFlow {
   onTrack: boolean;
 }
 
+export interface Pnl {
+  months: { month: string; income: number; spend: number; net: number; is_current: boolean }[];
+  netCash: number;
+  avgMonthlyNet: number;
+  runwayMonths: number | null;
+}
+
 export interface Briefing {
   id: string;
   content: string;

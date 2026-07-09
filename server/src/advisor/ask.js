@@ -4,7 +4,7 @@ import { config } from '../config.js';
 import { q } from '../db/pool.js';
 import {
   categoryMoM, subcategoryMoM, merchantMoM, recurringCharges,
-  categoryBaselines, netCashFlow, categorySpendForMonth, cashflowProjection,
+  categoryBaselines, netCashFlow, categorySpendForMonth, cashflowProjection, monthlyPnl,
 } from '../analytics/rollups.js';
 import { rewardsSummary } from '../rewards/engine.js';
 
@@ -99,6 +99,17 @@ const tools = [
       additionalProperties: false,
     },
     run: async ({ min_spend }) => asJson(await merchantMoM(min_spend ?? 100)),
+  }),
+  betaTool({
+    name: 'monthly_pnl',
+    description:
+      'Household P&L: per-month income vs personal spend (Business/Transfer excluded) with net, for the last N months. The profitability trend.',
+    inputSchema: {
+      type: 'object',
+      properties: { months: { type: 'integer', description: 'Default 6, max 24' } },
+      additionalProperties: false,
+    },
+    run: async ({ months }) => asJson(await monthlyPnl(Math.min(months || 6, 24))),
   }),
   betaTool({
     name: 'cash_flow_projection',

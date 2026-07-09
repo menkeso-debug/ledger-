@@ -46,6 +46,84 @@ function DetailList({
   );
 }
 
+// Household P&L: the CEO view — income vs spend per month, net, and runway.
+function PnlPanel() {
+  const { pnl } = useStore();
+  const p = pnl.data;
+  if (pnl.status === 'loading') {
+    return (
+      <Panel style={{ padding: '24px 28px' }}>
+        <Sk w="30%" h={16} style={{ marginBottom: 16 }} />
+        <Sk h={140} />
+      </Panel>
+    );
+  }
+  if (!p || pnl.status !== 'ready') return null;
+
+  const full = p.months;
+  const max = Math.max(...full.map((m) => Math.max(m.income, m.spend)), 1);
+  const H = 110;
+  const monthLabel = (ym: string) =>
+    new Date(ym + '-01T00:00:00').toLocaleDateString('en-US', { month: 'short' });
+
+  return (
+    <Panel style={{ padding: '24px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 600 }}>
+          Household P&L
+          <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}> · income vs spend, last 6 months</span>
+        </div>
+        <div style={{ display: 'flex', gap: 22, alignItems: 'baseline' }}>
+          <div>
+            <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Avg net / mo </span>
+            <span className="num" style={{ fontSize: 15, fontWeight: 650, color: p.avgMonthlyNet >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
+              {p.avgMonthlyNet >= 0 ? '+' : '−'}{money(Math.abs(p.avgMonthlyNet))}
+            </span>
+          </div>
+          {p.runwayMonths != null && (
+            <div>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Cash runway </span>
+              <span className="num" style={{ fontSize: 15, fontWeight: 650, color: p.runwayMonths < 3 ? 'var(--neg)' : 'var(--amber)' }}>
+                {p.runwayMonths} mo
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${full.length}, 1fr)`, gap: 14, alignItems: 'end' }}>
+        {full.map((m) => (
+          <div key={m.month} style={{ textAlign: 'center', minWidth: 0 }}>
+            <div className="num" style={{ fontSize: 12, fontWeight: 650, marginBottom: 6, color: m.net >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
+              {m.net >= 0 ? '+' : '−'}{money(Math.abs(Math.round(m.net)))}
+            </div>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', justifyContent: 'center', height: H, opacity: m.is_current ? 0.55 : 1 }}>
+              <div
+                title={`Income ${money(m.income)}`}
+                style={{ width: '34%', maxWidth: 26, height: Math.max((m.income / max) * H, 2), borderRadius: '4px 4px 2px 2px', background: 'var(--pos)', opacity: 0.85 }}
+              />
+              <div
+                title={`Spend ${money(m.spend)}`}
+                style={{ width: '34%', maxWidth: 26, height: Math.max((m.spend / max) * H, 2), borderRadius: '4px 4px 2px 2px', background: 'var(--text-3)', opacity: 0.65 }}
+              />
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 7 }}>
+              {monthLabel(m.month)}{m.is_current ? ' · MTD' : ''}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 16, marginTop: 14, fontSize: 11.5, color: 'var(--text-3)', justifyContent: 'center' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--pos)', opacity: 0.85 }} /> Income
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--text-3)', opacity: 0.65 }} /> Spend
+        </span>
+      </div>
+    </Panel>
+  );
+}
+
 function CashFlowPanel() {
   const { cashflow } = useStore();
   const { go } = useNav();
@@ -267,6 +345,9 @@ export function Overview() {
           </div>
         </Panel>
       </div>
+
+      {/* ---- Household P&L (the CEO view) ---- */}
+      <PnlPanel />
 
       {/* ---- 30-day cash flow projection ---- */}
       <CashFlowPanel />

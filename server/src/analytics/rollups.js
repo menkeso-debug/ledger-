@@ -395,6 +395,26 @@ export async function monthlyCategoryHistory(months = 6) {
   return byCat;
 }
 
+// Household P&L: per-month income vs personal spend, last N full months + MTD.
+export async function monthlyPnl(months = 6) {
+  const { rows } = await q(
+    `WITH m AS (
+       SELECT to_char(date_trunc('month', t.date), 'YYYY-MM') AS month,
+              COALESCE(SUM(-t.amount) FILTER (WHERE t.amount < 0 AND t.category = 'Income'), 0)::float AS income,
+              COALESCE(SUM(t.amount) FILTER (WHERE t.amount > 0 AND t.category NOT IN ('Income','Transfer','Business')), 0)::float AS spend
+       FROM transactions t
+       WHERE NOT t.removed
+         AND t.date >= (date_trunc('month', CURRENT_DATE) - make_interval(months => $1))::date
+       GROUP BY 1 ORDER BY 1
+     )
+     SELECT month, income, spend, (income - spend)::float AS net,
+            month = to_char(date_trunc('month', CURRENT_DATE), 'YYYY-MM') AS is_current
+     FROM m`,
+    [months]
+  );
+  return rows;
+}
+
 // --- Income streams & 30-day cash flow projection ---------------------------
 
 const classifyCadence = (gap) => {

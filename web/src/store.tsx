@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from './lib/api';
-import type { Overview, Account, Category, Insight, Txn, Rewards, Briefing, CashFlow } from './lib/types';
+import type { Overview, Account, Category, Insight, Txn, Rewards, Briefing, CashFlow, Pnl } from './lib/types';
 
 export type Status = 'loading' | 'ready' | 'empty' | 'error';
 export interface Domain<T> { status: Status; data: T | null; }
@@ -14,6 +14,7 @@ interface Store {
   rewards: Domain<Rewards>;
   briefing: Domain<Briefing>;
   cashflow: Domain<CashFlow>;
+  pnl: Domain<Pnl>;
   categoryNames: string[];
   addCategoryName: (name: string) => Promise<void>;
   renameCategory: (from: string, to: string) => Promise<void>;
@@ -48,6 +49,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [rewards, setRewards] = useState<Domain<Rewards>>(loading);
   const [briefing, setBriefing] = useState<Domain<Briefing>>(loading);
   const [cashflow, setCashflow] = useState<Domain<CashFlow>>(loading);
+  const [pnl, setPnl] = useState<Domain<Pnl>>(loading);
   const [categoryNames, setCategoryNames] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
 
@@ -80,6 +82,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       api.get<string[]>('/api/category-names')
         .then(setCategoryNames)
         .catch(() => {}),
+      api.get<Pnl>('/api/pnl')
+        .then((d) => setPnl(domainState(d, (x) => x.months.length === 0)))
+        .catch(() => setPnl({ status: 'error', data: null })),
     ]);
   }, []);
 
@@ -142,7 +147,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [accounts.data]);
 
   const value: Store = {
-    overview, accounts, categories, insights, transactions, rewards, briefing, cashflow,
+    overview, accounts, categories, insights, transactions, rewards, briefing, cashflow, pnl,
     categoryNames, addCategoryName, renameCategory,
     refresh, syncNow, dismissInsight, syncedAt, syncing,
   };

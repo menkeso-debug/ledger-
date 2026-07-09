@@ -4,7 +4,7 @@ import { config } from '../config.js';
 import { suggestBudgets } from '../advisor/budgets.js';
 import {
   categoryMoM, subcategoryMoM, netCashFlow, dailySpendSeries,
-  accountSparkSeries, cardBalances, cashflowProjection,
+  accountSparkSeries, cardBalances, cashflowProjection, monthlyPnl,
 } from '../analytics/rollups.js';
 
 export const apiRouter = Router();
@@ -62,6 +62,29 @@ apiRouter.get('/overview', async (_req, res, next) => {
       heroInsight: insight,
       accountCount: accounts.length,
       hasData: accounts.length > 0,
+    });
+  } catch (err) { next(err); }
+});
+
+// --- Household P&L (income vs spend by month) + runway -------------------------
+
+apiRouter.get('/pnl', async (_req, res, next) => {
+  try {
+    const months = await monthlyPnl(6);
+    const { rows: cash } = await q(
+      `SELECT COALESCE(SUM(COALESCE(available_balance, current_balance)), 0)::float AS net_cash
+       FROM accounts WHERE type = 'depository'`
+    );
+    const netCash = cash[0].net_cash;
+    // Runway: cash ÷ average monthly burn over the last 3 FULL months.
+    const full = months.filter((m) => !m.is_current).slice(-3);
+    const avgNet = full.length ? full.reduce((s, m) => s + m.net, 0) / full.length : 0;
+    const runwayMonths = avgNet < 0 && netCash > 0 ? +(netCash / -avgNet).toFixed(1) : null;
+    res.json({
+      months,
+      netCash,
+      avgMonthlyNet: Math.round(avgNet),
+      runwayMonths, // null = not burning (or no cash data)
     });
   } catch (err) { next(err); }
 });
