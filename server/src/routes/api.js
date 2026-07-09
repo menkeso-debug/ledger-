@@ -177,7 +177,7 @@ apiRouter.patch('/transactions/:id/category', async (req, res, next) => {
 
 apiRouter.put('/merchants/flag', async (req, res, next) => {
   try {
-    const { merchant, nature } = req.body || {};
+    const { merchant, nature, monthly_amount } = req.body || {};
     if (!merchant) return res.status(400).json({ error: 'merchant required' });
     const key = merchant.trim().toLowerCase();
     if (nature == null) {
@@ -187,12 +187,16 @@ apiRouter.put('/merchants/flag', async (req, res, next) => {
     if (!['constant', 'one_off'].includes(nature)) {
       return res.status(400).json({ error: "nature must be 'constant', 'one_off', or null" });
     }
+    const amount = nature === 'constant' && monthly_amount != null ? Number(monthly_amount) : null;
+    if (amount != null && (Number.isNaN(amount) || amount < 0)) {
+      return res.status(400).json({ error: 'monthly_amount must be a non-negative number' });
+    }
     await q(
-      `INSERT INTO merchant_flags (merchant_key, nature) VALUES ($1, $2)
-       ON CONFLICT (merchant_key) DO UPDATE SET nature = EXCLUDED.nature`,
-      [key, nature]
+      `INSERT INTO merchant_flags (merchant_key, nature, monthly_amount) VALUES ($1, $2, $3)
+       ON CONFLICT (merchant_key) DO UPDATE SET nature = EXCLUDED.nature, monthly_amount = EXCLUDED.monthly_amount`,
+      [key, nature, amount]
     );
-    res.json({ ok: true, merchant, nature });
+    res.json({ ok: true, merchant, nature, monthly_amount: amount });
   } catch (err) { next(err); }
 });
 

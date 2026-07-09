@@ -535,9 +535,13 @@ export async function cashflowProjection() {
   const recurringMerchants = recurring.filter((r) => r.is_bill).map((r) => r.merchant);
 
   // User-declared spend nature beats every heuristic.
-  const { rows: flagRows } = await q('SELECT merchant_key, nature FROM merchant_flags');
+  const { rows: flagRows } = await q('SELECT merchant_key, nature, monthly_amount::float AS monthly_amount FROM merchant_flags');
   const oneOffKeys = flagRows.filter((f) => f.nature === 'one_off').map((f) => f.merchant_key);
   const constantKeys = flagRows.filter((f) => f.nature === 'constant').map((f) => f.merchant_key);
+  const declaredAmounts = new Map(
+    flagRows.filter((f) => f.nature === 'constant' && f.monthly_amount != null)
+      .map((f) => [f.merchant_key, f.monthly_amount])
+  );
 
   const { rows: catMonths } = await q(
     `WITH window_tx AS (
@@ -585,7 +589,16 @@ export async function cashflowProjection() {
      GROUP BY 1`,
     [constantKeys]
   );
-  const pinnedConstants = constants.map((c) => ({ merchant: c.merchant, monthly: Math.round(c.monthly) }));
+  // User-declared monthly amount wins over the window average; constants with
+  // a declared amount but no window transactions still count.
+  const pinnedConstants = constants.map((c) => ({
+    merchant: c.merchant,
+    monthly: Math.round(declaredAmounts.get(c.merchant.toLowerCase()) ?? c.monthly),
+  }));
+  const seenKeys = new Set(constants.map((c) => c.merchant.toLowerCase()));
+  for (const [key, amount] of declaredAmounts) {
+    if (!seenKeys.has(key)) pinnedConstants.push({ merchant: key, monthly: Math.round(amount) });
+  }
   const pinnedTotal = pinnedConstants.reduce((s, c) => s + c.monthly, 0);
 
   const byCategory = new Map();
