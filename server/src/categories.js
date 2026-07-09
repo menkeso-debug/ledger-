@@ -58,6 +58,9 @@ const DETAILED_MAP = {
   ENTERTAINMENT_MUSIC_AND_AUDIO: ['Subscriptions', 'Music'],
   ENTERTAINMENT_VIDEO_GAMES: ['Subscriptions', 'Gaming'],
   GENERAL_SERVICES_SUBSCRIPTION: ['Subscriptions', 'Services'],
+  ENTERTAINMENT_SPORTING_EVENTS_AMUSEMENT_PARKS_AND_MUSEUMS: ['Entertainment', 'Events & parks'],
+  ENTERTAINMENT_CASINOS_AND_GAMBLING: ['Entertainment', 'Other'],
+  ENTERTAINMENT_OTHER_ENTERTAINMENT: ['Entertainment', 'Other'],
 
   // Kids
   GENERAL_SERVICES_CHILDCARE: ['Kids', 'Childcare'],
@@ -79,7 +82,7 @@ const PRIMARY_MAP = {
   FOOD_AND_DRINK: ['Dining', 'Other'],
   GENERAL_MERCHANDISE: ['Shopping', 'Other'],
   HOME_IMPROVEMENT: ['Shopping', 'Home'],
-  ENTERTAINMENT: ['Subscriptions', 'Entertainment'],
+  ENTERTAINMENT: ['Entertainment', 'Other'],
   MEDICAL: ['Health', 'Medical'],
   PERSONAL_CARE: ['Health', 'Personal care'],
   GENERAL_SERVICES: ['Other', 'Services'],

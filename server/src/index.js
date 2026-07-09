@@ -14,6 +14,7 @@ import { importRouter } from './routes/import.js';
 import { syncAllItems } from './plaid/sync.js';
 import { computeInsights } from './analytics/engine.js';
 import { generateBriefing } from './advisor/briefing.js';
+import { auditCategories } from './advisor/audit.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webDist = path.resolve(here, '../../web/dist');
@@ -55,6 +56,7 @@ async function main() {
   cron.schedule(config.briefingCron, async () => {
     try {
       await syncAllItems();
+      await auditCategories().catch((err) => log.error('category audit failed', err));
       await computeInsights();
       await generateBriefing();
     } catch (err) {

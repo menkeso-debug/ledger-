@@ -97,6 +97,12 @@ export interface CashFlow {
   recurringTotal: number;
   discretionaryRunRate: number;
   runRateBasis?: { weeks: number; medianWeekly: number };
+  projectionBasis?: {
+    method: string;
+    months: number;
+    categoryMedians: { category: string; monthly: number }[];
+    anomaliesExcluded: { merchant: string; amount: number; date: string }[];
+  };
   upcomingBills: { merchant: string; date: string; amount: number }[];
   net: number;
   onTrack: boolean;

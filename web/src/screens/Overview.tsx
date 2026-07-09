@@ -73,21 +73,36 @@ function CashFlowPanel() {
             <div style={{ fontSize: 13, color: 'var(--text-3)' }}>No income stream detected yet</div>
           )}
         </div>
-        {cf.upcomingBills.length > 0 && (
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>
-              Bills {money(cf.recurringTotal)} + everyday {money(cf.discretionaryRunRate)}
-              {cf.runRateBasis ? ` (median week ${money(cf.runRateBasis.medianWeekly)} × 4.3, last ${cf.runRateBasis.weeks} wks)` : ''}
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, marginBottom: 6 }}>
+            Bills {money(cf.recurringTotal)} + steady spend {money(cf.discretionaryRunRate)}/mo
+            {cf.projectionBasis ? ` — median month per category, last ${cf.projectionBasis.months} months` : ''}
+          </div>
+          {cf.projectionBasis && cf.projectionBasis.categoryMedians.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {cf.projectionBasis.categoryMedians.map((c) => (
+                <span key={c.category} className="num" style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-3)', padding: '4px 10px', borderRadius: 20 }}>
+                  {c.category} {money(c.monthly)}
+                </span>
+              ))}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          )}
+          {cf.upcomingBills.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
               {cf.upcomingBills.slice(0, 5).map((b, i) => (
                 <span key={i} className="num" style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-3)', padding: '4px 10px', borderRadius: 20 }}>
                   {b.merchant} · {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {money(b.amount)}
                 </span>
               ))}
             </div>
-          </div>
-        )}
+          )}
+          {cf.projectionBasis && cf.projectionBasis.anomaliesExcluded.length > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              <span style={{ fontWeight: 600, color: 'var(--amber)' }}>One-offs flagged, not baked in: </span>
+              {cf.projectionBasis.anomaliesExcluded.map((a) => `${a.merchant} ${money(a.amount)}`).join(' · ')}
+            </div>
+          )}
+        </div>
       </div>
     </Panel>
   );

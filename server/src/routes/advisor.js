@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { generateBriefing, latestBriefing } from '../advisor/briefing.js';
 import { ask } from '../advisor/ask.js';
+import { auditCategories } from '../advisor/audit.js';
 
 export const advisorRouter = Router();
 
@@ -13,6 +14,12 @@ advisorRouter.get('/briefing', async (_req, res, next) => {
 advisorRouter.post('/briefing', async (_req, res, next) => {
   try {
     res.json(await generateBriefing());
+  } catch (err) { next(err); }
+});
+
+advisorRouter.post('/audit-categories', async (_req, res, next) => {
+  try {
+    res.json(await auditCategories());
   } catch (err) { next(err); }
 });
 

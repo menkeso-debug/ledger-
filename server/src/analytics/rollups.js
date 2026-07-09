@@ -214,10 +214,11 @@ export async function recurringCharges() {
      FROM stats s
      JOIN gaps g ON g.merchant = s.merchant
      JOIN latest l ON l.merchant = s.merchant
-     WHERE s.n >= 3
+     WHERE s.n >= 2
        AND s.avg_amount > 0
        AND (s.sd_amount / NULLIF(s.avg_amount, 0)) < 0.25
        AND g.median_gap BETWEEN 5 AND 40
+       AND (s.n >= 3 OR (s.n = 2 AND g.median_gap BETWEEN 26 AND 38 AND s.median_amount >= 500))
        AND s.last_date >= CURRENT_DATE - interval '45 days'
      ORDER BY s.median_amount DESC`
   );
@@ -403,6 +404,26 @@ const classifyCadence = (gap) => {
   return null;
 };
 
+// US payroll convention: deposits scheduled on a weekend/holiday land the
+// preceding business day (matches ADP/most processors).
+const FEDERAL_HOLIDAYS = new Set([
+  '2026-01-01', '2026-01-19', '2026-02-16', '2026-05-25', '2026-06-19',
+  '2026-07-03', '2026-09-07', '2026-10-12', '2026-11-11', '2026-11-26', '2026-12-25',
+  '2027-01-01', '2027-01-18', '2027-02-15', '2027-05-31', '2027-06-18',
+  '2027-07-05', '2027-09-06', '2027-10-11', '2027-11-11', '2027-11-25', '2027-12-24',
+]);
+
+function snapToBusinessDay(d) {
+  const out = new Date(d);
+  for (let i = 0; i < 7; i++) {
+    const dow = out.getUTCDay();
+    const iso = out.toISOString().slice(0, 10);
+    if (dow !== 0 && dow !== 6 && !FEDERAL_HOLIDAYS.has(iso)) return out;
+    out.setUTCDate(out.getUTCDate() - 1);
+  }
+  return out;
+}
+
 // Detect recurring income deposits (salary etc.): regular inflows on checking.
 // Predicts upcoming pay dates from median cadence.
 export async function incomeStreams() {
@@ -445,10 +466,15 @@ export async function incomeStreams() {
     const active = daysSinceLast <= gap * 2 + 7;
     const upcoming = [];
     if (active) {
-      let next = new Date(lastDate.getTime() + gap * 864e5);
+      // Regular cadences project on an exact grid (biweekly = 14, weekly = 7)
+      // anchored to the last real deposit, then snap to the preceding business
+      // day — mirrors how ADP-style payroll actually lands.
+      const gridGap = cadence === 'biweekly' ? 14 : cadence === 'weekly' ? 7 : gap;
+      let next = new Date(lastDate.getTime() + gridGap * 864e5);
       while (upcoming.length < 6 && next <= new Date(today.getTime() + 60 * 864e5)) {
-        if (next >= today) upcoming.push({ date: next.toISOString().slice(0, 10), amount });
-        next = new Date(next.getTime() + gap * 864e5);
+        const snapped = snapToBusinessDay(next);
+        if (snapped >= today) upcoming.push({ date: snapped.toISOString().slice(0, 10), amount });
+        next = new Date(next.getTime() + gridGap * 864e5);
       }
     }
     streams.push({
@@ -499,25 +525,67 @@ export async function cashflowProjection() {
   upcomingBills.sort((a, b) => a.date.localeCompare(b.date));
   const recurringTotal = upcomingBills.reduce((s, b) => s + b.amount, 0);
 
-  // Discretionary run-rate: MEDIAN weekly spend over the last 12 full weeks,
-  // excluding bill merchants. Median (not mean) so one-off spikes — a big
-  // purchase, a heavy shopping week — don't dominate the forecast. Adjusts
-  // dynamically: every recategorization or new week reshapes it.
+  // Steady spend: per-category MONTHLY pattern over the last 3 full months.
+  // For each category, take the median month — a constant expense shows up in
+  // every month and survives; a one-off inflates a single month and gets
+  // discounted. Individual anomaly transactions (single occurrence, >= $1,500)
+  // are excluded from the baseline entirely and surfaced separately — flagged,
+  // never baked in. Bill merchants are excluded here (projected from their own
+  // cadence above).
   const recurringMerchants = recurring.filter((r) => r.is_bill).map((r) => r.merchant);
-  const { rows: weekly } = await q(
-    `SELECT date_trunc('week', t.date)::date AS wk, SUM(t.amount)::float AS spend
-     FROM transactions t
-     WHERE ${SPEND_FILTER}
-       AND t.date >= (date_trunc('week', CURRENT_DATE) - interval '12 weeks')::date
-       AND t.date < date_trunc('week', CURRENT_DATE)::date
-       AND COALESCE(t.merchant_name, t.name) != ALL($1::text[])
-     GROUP BY 1 ORDER BY 1`,
+  const { rows: catMonths } = await q(
+    `WITH window_tx AS (
+       SELECT t.category, COALESCE(t.merchant_name, t.name) AS merchant,
+              date_trunc('month', t.date) AS m, t.amount::float AS amount, t.date
+       FROM transactions t
+       WHERE ${SPEND_FILTER}
+         AND t.date >= (date_trunc('month', CURRENT_DATE) - interval '3 months')::date
+         AND t.date < date_trunc('month', CURRENT_DATE)::date
+         AND COALESCE(t.merchant_name, t.name) != ALL($1::text[])
+     ),
+     merchant_counts AS (
+       SELECT merchant, COUNT(*)::int AS n FROM window_tx GROUP BY merchant
+     ),
+     anomalies AS (
+       SELECT w.merchant, w.amount, w.date
+       FROM window_tx w JOIN merchant_counts mc ON mc.merchant = w.merchant
+       WHERE mc.n = 1 AND w.amount >= 1500
+     )
+     SELECT w.category, to_char(w.m, 'YYYY-MM') AS month,
+            SUM(w.amount) FILTER (
+              WHERE NOT EXISTS (
+                SELECT 1 FROM anomalies a
+                WHERE a.merchant = w.merchant AND a.amount = w.amount AND a.date = w.date
+              )
+            )::float AS steady_spend,
+            (SELECT json_agg(json_build_object('merchant', a.merchant, 'amount', a.amount, 'date', a.date))
+             FROM anomalies a) AS all_anomalies
+     FROM window_tx w
+     GROUP BY w.category, 2`,
     [recurringMerchants]
   );
-  const weeklyVals = weekly.map((r) => r.spend);
-  const medianWeekly = median(weeklyVals);
-  const discretionaryRunRate = medianWeekly * (30 / 7);
-  const projectedSpend = recurringTotal + discretionaryRunRate;
+
+  const byCategory = new Map();
+  for (const r of catMonths) {
+    if (!byCategory.has(r.category)) byCategory.set(r.category, []);
+    byCategory.get(r.category).push(r.steady_spend || 0);
+  }
+  const categoryMedians = [...byCategory.entries()]
+    .map(([category, months]) => {
+      // A category absent in a month = $0 that month; pad to 3 samples
+      while (months.length < 3) months.push(0);
+      return { category, monthly: Math.round(median(months)) };
+    })
+    .filter((c) => c.monthly > 0)
+    .sort((a, b) => b.monthly - a.monthly);
+  const steadyMonthly = categoryMedians.reduce((s, c) => s + c.monthly, 0);
+
+  const anomalies = (catMonths[0]?.all_anomalies || [])
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 6)
+    .map((a) => ({ merchant: a.merchant, amount: Math.round(a.amount), date: String(a.date).slice(0, 10) }));
+
+  const projectedSpend = recurringTotal + steadyMonthly;
   const net = expectedIncome - projectedSpend;
 
   return {
@@ -527,8 +595,13 @@ export async function cashflowProjection() {
     incomeStreams: streams,
     projectedSpend,
     recurringTotal,
-    discretionaryRunRate,
-    runRateBasis: { weeks: weeklyVals.length, medianWeekly: Math.round(medianWeekly) },
+    discretionaryRunRate: steadyMonthly, // legacy field name for the UI
+    projectionBasis: {
+      method: 'per-category median month, last 3 full months, one-offs excluded',
+      months: 3,
+      categoryMedians: categoryMedians.slice(0, 8),
+      anomaliesExcluded: anomalies,
+    },
     upcomingBills: upcomingBills.slice(0, 12),
     net,
     onTrack: net >= 0,

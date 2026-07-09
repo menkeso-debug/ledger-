@@ -157,9 +157,23 @@ function Header() {
 
   return (
     <header className="apphead" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '38px 44px 18px', gap: 20, flexWrap: 'wrap' }}>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-3)', marginBottom: 5 }}>{eyebrow}</div>
-        <h1 style={{ margin: 0, fontSize: 'clamp(24px,4.4vw,30px)', fontWeight: 650, letterSpacing: '-0.03em', lineHeight: 1.05 }}>{title}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div
+          onClick={() => window.history.back()}
+          title="Back"
+          style={{
+            width: 36, height: 36, borderRadius: 11, background: 'var(--surface)',
+            border: '1px solid var(--hairline)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', boxShadow: 'var(--shadow-sm)', fontSize: 18,
+            color: 'var(--text-2)', cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+          }}
+        >
+          ‹
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-3)', marginBottom: 5 }}>{eyebrow}</div>
+          <h1 style={{ margin: 0, fontSize: 'clamp(24px,4.4vw,30px)', fontWeight: 650, letterSpacing: '-0.03em', lineHeight: 1.05 }}>{title}</h1>
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <div
@@ -191,12 +205,30 @@ function Header() {
   );
 }
 
+const SCREEN_IDS: ScreenId[] = ['overview', 'accounts', 'categories', 'insights', 'transactions', 'rewards'];
+
+function screenFromPath(): ScreenId {
+  const seg = window.location.pathname.split('/')[1] as ScreenId;
+  return SCREEN_IDS.includes(seg) ? seg : 'overview';
+}
+
 function Shell() {
   // Land on Accounts when returning from a bank's OAuth page so Link can resume.
   const [screen, setScreen] = useState<ScreenId>(() =>
-    window.location.search.includes('oauth_state_id') ? 'accounts' : 'overview'
+    window.location.search.includes('oauth_state_id') ? 'accounts' : screenFromPath()
   );
   const [txFilter, setTxFilter] = useState<TxFilter>({});
+
+  // Real browser history: every navigation is a history entry, so the browser
+  // back/forward buttons (and the header ‹ button) walk your trail.
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      setScreen((e.state?.screen as ScreenId) || screenFromPath());
+      setTxFilter(e.state?.txFilter || {});
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored = localStorage.getItem('ledger-theme');
     if (stored === 'dark' || stored === 'light') return stored;
@@ -211,6 +243,7 @@ function Shell() {
   const nav: Nav = {
     screen,
     go: (s, opts) => {
+      window.history.pushState({ screen: s, txFilter: opts || {} }, '', `/${s}`);
       setScreen(s);
       setTxFilter(opts || {});
       window.scrollTo(0, 0);
