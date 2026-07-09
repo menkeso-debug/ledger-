@@ -63,8 +63,8 @@ export function authRoutes(app) {
 // Both full and mount-relative forms: req.path is relative when the gate is
 // mounted at '/api', absolute if it's ever mounted globally.
 const OPEN_PATHS = new Set([
-  '/api/auth/login', '/api/auth/check', '/api/plaid/webhook',
-  '/auth/login', '/auth/check', '/plaid/webhook',
+  '/api/auth/login', '/api/auth/check', '/api/plaid/webhook', '/api/health',
+  '/auth/login', '/auth/check', '/plaid/webhook', '/health',
 ]);
 
 export function authGate(req, res, next) {

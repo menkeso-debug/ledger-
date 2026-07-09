@@ -31,6 +31,8 @@ app.use('/api/plaid/webhook', express.raw({ type: '*/*', limit: '1mb' }));
 app.use('/api/import', express.json({ limit: '25mb' }));
 app.use(express.json({ limit: '1mb' }));
 
+// Ungated healthcheck target for the platform's deploy probe.
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
 authRoutes(app);
 app.use('/api', authGate);
 if (!config.password) log.warn('LEDGER_PASSWORD not set — app is open, no password gate');
