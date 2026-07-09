@@ -1,12 +1,99 @@
+import { useEffect, useState } from 'react';
+import { api } from '../lib/api';
 import { useStore } from '../store';
 import { useNav } from '../App';
 import { money } from '../lib/format';
-import { Panel, Sk, EmptyState } from '../components/ui';
+import { Panel, Sk, EmptyState, FilledButton } from '../components/ui';
 import { CardTile } from '../components/CardTile';
 import { Sparkline } from '../components/Sparkline';
 import { PlaidLinkButton } from '../components/PlaidLinkButton';
 import { AppleCardImport } from '../components/AppleCardImport';
 import { TIER_ART } from '../lib/tiers';
+
+interface Asset { id: string; name: string; value: number }
+
+// Manual assets (brokerage, external savings, equity) — feed net worth.
+function AssetsPanel() {
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [name, setName] = useState('');
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = () => api.get<Asset[]>('/api/assets').then(setAssets).catch(() => {});
+  useEffect(() => { load(); }, []);
+
+  const add = async () => {
+    const v = Number(value.replace(/[$,\s]/g, ''));
+    if (!name.trim() || Number.isNaN(v)) return;
+    setBusy(true);
+    try {
+      await api.post('/api/assets', { name: name.trim(), value: v });
+      setName(''); setValue('');
+      await load();
+    } finally { setBusy(false); }
+  };
+
+  const update = async (a: Asset, newValue: string) => {
+    const v = Number(newValue.replace(/[$,\s]/g, ''));
+    if (Number.isNaN(v)) return;
+    await api.post('/api/assets', { id: a.id, name: a.name, value: v });
+    await load();
+  };
+
+  return (
+    <Panel style={{ padding: '22px 24px', marginTop: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ fontSize: 15, fontWeight: 600 }}>Other assets
+          <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}> · manual — counted in net worth (brokerage, savings, equity)</span>
+        </div>
+      </div>
+      {assets.map((a) => (
+        <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--hairline-2)' }}>
+          <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{a.name}</span>
+          <AssetValue asset={a} onSave={update} />
+          <span
+            onClick={async () => { await fetch(`/api/assets/${a.id}`, { method: 'DELETE' }); await load(); }}
+            title="Remove"
+            style={{ fontSize: 13, color: 'var(--text-3)', cursor: 'pointer' }}
+          >✕</span>
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+        <input
+          value={name} onChange={(e) => setName(e.target.value)} placeholder="Asset name (e.g. Webull)"
+          style={{ flex: 1, minWidth: 160, fontSize: 13, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--hairline)', background: 'var(--surface)', color: 'var(--text)', outline: 'none' }}
+        />
+        <input
+          value={value} onChange={(e) => setValue(e.target.value)} placeholder="Value $" className="num"
+          onKeyDown={(e) => e.key === 'Enter' && add()}
+          style={{ width: 110, fontSize: 13, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--hairline)', background: 'var(--surface)', color: 'var(--text)', outline: 'none', textAlign: 'right' }}
+        />
+        <FilledButton onClick={add} disabled={busy}>{busy ? 'Adding…' : 'Add asset'}</FilledButton>
+      </div>
+    </Panel>
+  );
+}
+
+function AssetValue({ asset, onSave }: { asset: Asset; onSave: (a: Asset, v: string) => Promise<void> }) {
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(String(asset.value));
+  if (editing) {
+    return (
+      <input
+        autoFocus className="num" value={v}
+        onChange={(e) => setV(e.target.value)}
+        onKeyDown={async (e) => { if (e.key === 'Enter') { await onSave(asset, v); setEditing(false); } if (e.key === 'Escape') setEditing(false); }}
+        onBlur={() => setEditing(false)}
+        style={{ width: 110, fontSize: 14, fontWeight: 600, textAlign: 'right', border: '1px solid var(--accent)', borderRadius: 8, padding: '4px 8px', background: 'var(--surface)', color: 'var(--text)', outline: 'none' }}
+      />
+    );
+  }
+  return (
+    <span className="num" onClick={() => { setV(String(asset.value)); setEditing(true); }} title="Click to update" style={{ fontSize: 15, fontWeight: 640, cursor: 'pointer', borderBottom: '1px dashed var(--hairline)' }}>
+      {money(asset.value)}
+    </span>
+  );
+}
 
 export function Accounts() {
   const { accounts } = useStore();
@@ -105,6 +192,7 @@ export function Accounts() {
           );
         })}
       </div>
+      <AssetsPanel />
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <PlaidLinkButton label="Connect another account" />
         <AppleCardImport />

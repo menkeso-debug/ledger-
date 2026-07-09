@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createLinkToken, exchangePublicToken, syncItemByPlaidId, syncAllItems } from '../plaid/sync.js';
 import { verifyPlaidWebhook } from '../plaid/webhookVerify.js';
 import { computeInsights } from '../analytics/engine.js';
+import { runAlerts } from '../alerts.js';
 import { log } from '../lib/log.js';
 
 export const plaidRouter = Router();
@@ -45,6 +46,8 @@ plaidRouter.post('/webhook', async (req, res) => {
     if (type === 'TRANSACTIONS' && ['SYNC_UPDATES_AVAILABLE', 'INITIAL_UPDATE', 'HISTORICAL_UPDATE', 'DEFAULT_UPDATE'].includes(code)) {
       await syncItemByPlaidId(itemId);
       await computeInsights();
+      // Near-real-time alerts: big charges and paycheck arrivals ride webhooks
+      await runAlerts().catch((err) => log.warn('post-webhook alerts failed', err));
     } else if (type === 'ITEM' && code === 'ERROR') {
       log.error('item error webhook', { itemId, error: payload.error?.error_code });
     }

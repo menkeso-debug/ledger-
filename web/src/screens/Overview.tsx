@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { useNav } from '../App';
+import { api } from '../lib/api';
 import { money } from '../lib/format';
 import { Panel, ChangeChip, Sk, FilledButton, OutlineButton, Bar } from '../components/ui';
 import { CardTile } from '../components/CardTile';
@@ -50,6 +51,10 @@ function DetailList({
 function PnlPanel() {
   const { pnl } = useStore();
   const p = pnl.data;
+  const [netWorth, setNetWorth] = useState<{ net: number; assets: number } | null>(null);
+  useEffect(() => {
+    api.get<{ net: number; assets: number }>('/api/networth').then(setNetWorth).catch(() => {});
+  }, [pnl.data]);
   if (pnl.status === 'loading') {
     return (
       <Panel style={{ padding: '24px 28px' }}>
@@ -73,7 +78,15 @@ function PnlPanel() {
           Household P&L
           <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}> · income vs spend, last 6 months</span>
         </div>
-        <div style={{ display: 'flex', gap: 22, alignItems: 'baseline' }}>
+        <div style={{ display: 'flex', gap: 22, alignItems: 'baseline', flexWrap: 'wrap' }}>
+          {netWorth && (
+            <div>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Net worth </span>
+              <span className="num" style={{ fontSize: 15, fontWeight: 650, color: netWorth.net >= 0 ? 'var(--text)' : 'var(--neg)' }}>
+                {netWorth.net >= 0 ? '' : '−'}{money(Math.abs(netWorth.net))}
+              </span>
+            </div>
+          )}
           <div>
             <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Avg net / mo </span>
             <span className="num" style={{ fontSize: 15, fontWeight: 650, color: p.avgMonthlyNet >= 0 ? 'var(--pos)' : 'var(--neg)' }}>

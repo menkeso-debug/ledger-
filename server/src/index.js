@@ -15,6 +15,8 @@ import { syncAllItems } from './plaid/sync.js';
 import { computeInsights } from './analytics/engine.js';
 import { generateBriefing } from './advisor/briefing.js';
 import { auditCategories } from './advisor/audit.js';
+import { runAlerts, deliverBriefing } from './alerts.js';
+import { snapshotNetWorth } from './routes/api.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webDist = path.resolve(here, '../../web/dist');
@@ -58,7 +60,10 @@ async function main() {
       await syncAllItems();
       await auditCategories().catch((err) => log.error('category audit failed', err));
       await computeInsights();
-      await generateBriefing();
+      await snapshotNetWorth().catch((err) => log.error('networth snapshot failed', err));
+      await runAlerts().catch((err) => log.error('alerts run failed', err));
+      const briefing = await generateBriefing();
+      await deliverBriefing(briefing.content).catch((err) => log.error('briefing delivery failed', err));
     } catch (err) {
       log.error('scheduled briefing failed', err);
     }
@@ -69,6 +74,7 @@ async function main() {
     try {
       await syncAllItems();
       await computeInsights();
+      await runAlerts().catch((err) => log.error('alerts run failed', err));
     } catch (err) {
       log.error('scheduled sync failed', err);
     }

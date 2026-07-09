@@ -7,8 +7,9 @@ import { Categories } from './screens/Categories';
 import { Insights } from './screens/Insights';
 import { Transactions } from './screens/Transactions';
 import { Rewards } from './screens/Rewards';
+import { Debt } from './screens/Debt';
 
-export type ScreenId = 'overview' | 'accounts' | 'categories' | 'insights' | 'transactions' | 'rewards';
+export type ScreenId = 'overview' | 'accounts' | 'categories' | 'debt' | 'insights' | 'transactions' | 'rewards';
 
 export interface TxFilter {
   accountId?: string;
@@ -34,6 +35,7 @@ const NAV_ITEMS: { id: ScreenId; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'accounts', label: 'Accounts' },
   { id: 'categories', label: 'Categories' },
+  { id: 'debt', label: 'Debt' },
   { id: 'insights', label: 'Insights' },
   { id: 'transactions', label: 'Transactions' },
   { id: 'rewards', label: 'Rewards' },
@@ -146,6 +148,7 @@ function Header() {
     overview: [greeting(), 'Overview'],
     accounts: [`${n} account${n === 1 ? '' : 's'}`, 'Accounts'],
     categories: [`${monthName()} spending`, 'Categories'],
+    debt: ['Cost of carrying', 'Debt'],
     insights: ['Ledger Intelligence', 'Insights'],
     transactions: ['All activity', 'Transactions'],
     rewards: ['Status & points', 'Rewards'],
@@ -205,7 +208,7 @@ function Header() {
   );
 }
 
-const SCREEN_IDS: ScreenId[] = ['overview', 'accounts', 'categories', 'insights', 'transactions', 'rewards'];
+const SCREEN_IDS: ScreenId[] = ['overview', 'accounts', 'categories', 'debt', 'insights', 'transactions', 'rewards'];
 
 function screenFromPath(): ScreenId {
   const seg = window.location.pathname.split('/')[1] as ScreenId;
@@ -267,6 +270,7 @@ function Shell() {
             {screen === 'overview' && <Overview />}
             {screen === 'accounts' && <Accounts />}
             {screen === 'categories' && <Categories />}
+            {screen === 'debt' && <Debt />}
             {screen === 'insights' && <Insights />}
             {screen === 'transactions' && <Transactions />}
             {screen === 'rewards' && <Rewards />}

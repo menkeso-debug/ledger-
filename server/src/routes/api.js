@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q } from '../db/pool.js';
 import { config } from '../config.js';
 import { suggestBudgets } from '../advisor/budgets.js';
+import { debtOverview, simulatePayoff } from '../analytics/debt.js';
 import {
   categoryMoM, subcategoryMoM, netCashFlow, dailySpendSeries,
   accountSparkSeries, cardBalances, cashflowProjection, monthlyPnl,
@@ -128,6 +129,109 @@ apiRouter.put('/accounts/:id/tier', async (req, res, next) => {
     );
     if (!rows.length) return res.status(404).json({ error: 'account not found' });
     res.json(rows[0]);
+  } catch (err) { next(err); }
+});
+
+// --- Debt command center -------------------------------------------------------
+
+// Manual card terms (Plaid Transactions doesn't expose APR/min payment)
+apiRouter.put('/accounts/:id/terms', async (req, res, next) => {
+  try {
+    const { apr, min_payment } = req.body || {};
+    const aprN = apr == null ? null : Number(apr);
+    const minN = min_payment == null ? null : Number(min_payment);
+    if (aprN != null && (Number.isNaN(aprN) || aprN < 0 || aprN > 100)) {
+      return res.status(400).json({ error: 'apr must be 0-100' });
+    }
+    if (minN != null && (Number.isNaN(minN) || minN < 0)) {
+      return res.status(400).json({ error: 'min_payment must be >= 0' });
+    }
+    const { rows } = await q(
+      `UPDATE accounts SET apr = $2, min_payment = $3 WHERE id = $1
+       RETURNING id, name, mask, apr::float, min_payment::float`,
+      [req.params.id, aprN, minN]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'account not found' });
+    res.json(rows[0]);
+  } catch (err) { next(err); }
+});
+
+apiRouter.get('/debt', async (req, res, next) => {
+  try {
+    const overview = await debtOverview();
+    const budget = Number(req.query.budget) || null;
+    const plan = budget ? simulatePayoff(overview.cards, budget) : null;
+    // Comparison: minimum payments only — what avalanche + budget saves against
+    let minOnly = null;
+    if (plan?.feasible) {
+      const mins = overview.cards.reduce(
+        (s, c) => s + (c.min_payment ?? Math.max(35, c.balance * 0.01 + (c.balance * (c.apr ?? 24.99) / 100) / 12)),
+        0
+      );
+      minOnly = simulatePayoff(overview.cards, Math.ceil(mins));
+    }
+    res.json({ ...overview, plan, minOnly });
+  } catch (err) { next(err); }
+});
+
+// --- Net worth: manual assets + snapshots ---------------------------------------
+
+apiRouter.get('/assets', async (_req, res, next) => {
+  try {
+    const { rows } = await q('SELECT id, name, value::float, updated_at FROM assets ORDER BY value DESC');
+    res.json(rows);
+  } catch (err) { next(err); }
+});
+
+apiRouter.post('/assets', async (req, res, next) => {
+  try {
+    const { id, name, value } = req.body || {};
+    const v = Number(value);
+    if (!name || Number.isNaN(v)) return res.status(400).json({ error: 'name and numeric value required' });
+    const { rows } = id
+      ? await q('UPDATE assets SET name = $2, value = $3, updated_at = now() WHERE id = $1 RETURNING id, name, value::float', [id, name, v])
+      : await q('INSERT INTO assets (name, value) VALUES ($1, $2) RETURNING id, name, value::float', [name, v]);
+    res.json(rows[0]);
+  } catch (err) { next(err); }
+});
+
+apiRouter.delete('/assets/:id', async (req, res, next) => {
+  try {
+    await q('DELETE FROM assets WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+export async function computeNetWorth() {
+  const { rows } = await q(
+    `SELECT
+      (SELECT COALESCE(SUM(COALESCE(available_balance, current_balance)), 0) FROM accounts WHERE type = 'depository')::float AS cash,
+      (SELECT COALESCE(SUM(current_balance), 0) FROM accounts WHERE type = 'credit')::float AS card_debt,
+      (SELECT COALESCE(SUM(value), 0) FROM assets)::float AS assets`
+  );
+  const { cash, card_debt, assets } = rows[0];
+  return { cash, cardDebt: card_debt, assets, net: +(cash + assets - card_debt).toFixed(2) };
+}
+
+export async function snapshotNetWorth() {
+  const nw = await computeNetWorth();
+  await q(
+    `INSERT INTO networth_snapshots (date, cash, card_debt, assets, net)
+     VALUES (CURRENT_DATE, $1, $2, $3, $4)
+     ON CONFLICT (date) DO UPDATE SET cash = $1, card_debt = $2, assets = $3, net = $4`,
+    [nw.cash, nw.cardDebt, nw.assets, nw.net]
+  );
+  return nw;
+}
+
+apiRouter.get('/networth', async (_req, res, next) => {
+  try {
+    const now = await computeNetWorth();
+    const { rows: series } = await q(
+      `SELECT date, net::float FROM networth_snapshots
+       WHERE date >= CURRENT_DATE - interval '180 days' ORDER BY date`
+    );
+    res.json({ ...now, series });
   } catch (err) { next(err); }
 });
 
