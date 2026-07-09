@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useStore } from '../store';
 import { useNav } from '../App';
 import { money } from '../lib/format';
@@ -13,7 +14,7 @@ function DetailList({
 }: {
   title: string;
   hint?: string;
-  rows: { label: string; sub?: string; value: string; color?: string; muted?: boolean }[];
+  rows: { label: string; sub?: string; value: string; color?: string; muted?: boolean; onClick?: () => void }[];
   footer?: string;
   empty?: string;
 }) {
@@ -25,7 +26,12 @@ function DetailList({
       </div>
       {rows.length === 0 && <div style={{ fontSize: 13, color: 'var(--text-3)', padding: '8px 0' }}>{empty}</div>}
       {rows.map((r, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--hairline-2)' }}>
+        <div
+          key={i}
+          onClick={r.onClick}
+          title={r.onClick ? 'Click to drill down' : undefined}
+          style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--hairline-2)', cursor: r.onClick ? 'pointer' : 'default' }}
+        >
           <span style={{ fontSize: 13, fontWeight: r.muted ? 450 : 500, color: r.muted ? 'var(--text-3)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
             {r.label}
             {r.sub && <span style={{ fontSize: 11.5, color: r.color || 'var(--text-3)', fontWeight: 500 }}> · {r.sub}</span>}
@@ -42,6 +48,8 @@ function DetailList({
 
 function CashFlowPanel() {
   const { cashflow } = useStore();
+  const { go } = useNav();
+  const [showAllSteady, setShowAllSteady] = useState(false);
   if (cashflow.status === 'loading') {
     return (
       <Panel style={{ padding: '24px 28px' }}>
@@ -105,19 +113,23 @@ function CashFlowPanel() {
           title={`Steady spend · ${money(cf.discretionaryRunRate)}/mo`}
           hint={`median month, last ${cf.projectionBasis?.months ?? 3} months`}
           rows={[
-            ...(cf.projectionBasis?.categoryMedians.slice(0, 5).map((c) => ({
-              label: c.category, value: money(c.monthly),
-            })) ?? []),
-            ...(cf.projectionBasis?.pinnedConstants?.map((c) => ({
-              label: c.merchant.length > 20 ? c.merchant.slice(0, 20) + '…' : c.merchant,
-              sub: 'constant', value: money(c.monthly), color: 'var(--accent)',
+            ...((showAllSteady
+              ? cf.projectionBasis?.categoryMedians
+              : cf.projectionBasis?.categoryMedians.slice(0, 5)
+            )?.map((c) => ({
+              label: c.category,
+              value: money(c.monthly),
+              onClick: () => go('transactions', { category: c.category }),
             })) ?? []),
             ...((cf.projectionBasis?.categoryMedians.length ?? 0) > 5
-              ? [{
-                  label: `+ ${cf.projectionBasis!.categoryMedians.length - 5} more categories`,
-                  value: money(cf.projectionBasis!.categoryMedians.slice(5).reduce((s, c) => s + c.monthly, 0)),
-                  muted: true,
-                }]
+              ? [showAllSteady
+                  ? { label: 'Show less', value: '', muted: true, onClick: () => setShowAllSteady(false) }
+                  : {
+                      label: `+ ${cf.projectionBasis!.categoryMedians.length - 5} more categories`,
+                      value: money(cf.projectionBasis!.categoryMedians.slice(5).reduce((s, c) => s + c.monthly, 0)),
+                      muted: true,
+                      onClick: () => setShowAllSteady(true),
+                    }]
               : []),
           ]}
         />

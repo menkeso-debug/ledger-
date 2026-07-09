@@ -580,26 +580,29 @@ export async function cashflowProjection() {
   // Constant-flagged merchants: averaged over the window regardless of how
   // irregularly they bill (daycare per term, tuition, etc.).
   const { rows: constants } = await q(
-    `SELECT COALESCE(t.merchant_name, t.name) AS merchant, (SUM(t.amount) / 3.0)::float AS monthly
+    `SELECT COALESCE(t.merchant_name, t.name) AS merchant, (SUM(t.amount) / 3.0)::float AS monthly,
+            MODE() WITHIN GROUP (ORDER BY t.category) AS category
      FROM transactions t
      WHERE ${SPEND_FILTER}
-       AND t.date >= (date_trunc('month', CURRENT_DATE) - interval '3 months')::date
-       AND t.date < date_trunc('month', CURRENT_DATE)::date
+       AND t.date >= (date_trunc('month', CURRENT_DATE) - interval '6 months')::date
        AND lower(COALESCE(t.merchant_name, t.name)) = ANY($1::text[])
      GROUP BY 1`,
     [constantKeys]
   );
   // User-declared monthly amount wins over the window average; constants with
-  // a declared amount but no window transactions still count.
-  const pinnedConstants = constants.map((c) => ({
-    merchant: c.merchant,
-    monthly: Math.round(declaredAmounts.get(c.merchant.toLowerCase()) ?? c.monthly),
-  }));
-  const seenKeys = new Set(constants.map((c) => c.merchant.toLowerCase()));
-  for (const [key, amount] of declaredAmounts) {
-    if (!seenKeys.has(key)) pinnedConstants.push({ merchant: key, monthly: Math.round(amount) });
+  // a declared amount but no window transactions still count. Each one folds
+  // into its own category — it's ordinary recurring spend, not a special case.
+  const pinnedByCategory = new Map();
+  const seenKeys = new Set();
+  for (const c of constants) {
+    seenKeys.add(c.merchant.toLowerCase());
+    const monthly = Math.round(declaredAmounts.get(c.merchant.toLowerCase()) ?? c.monthly);
+    const cat = c.category || 'Other';
+    pinnedByCategory.set(cat, (pinnedByCategory.get(cat) || 0) + monthly);
   }
-  const pinnedTotal = pinnedConstants.reduce((s, c) => s + c.monthly, 0);
+  for (const [key, amount] of declaredAmounts) {
+    if (!seenKeys.has(key)) pinnedByCategory.set('Other', (pinnedByCategory.get('Other') || 0) + Math.round(amount));
+  }
 
   const byCategory = new Map();
   for (const r of catMonths) {
@@ -612,8 +615,15 @@ export async function cashflowProjection() {
       while (months.length < 3) months.push(0);
       return { category, monthly: Math.round(median(months)) };
     })
-    .filter((c) => c.monthly > 0)
-    .sort((a, b) => b.monthly - a.monthly);
+    .filter((c) => c.monthly > 0);
+  // Fold user-pinned recurring costs into their categories — they're ordinary
+  // spend, just declared rather than inferred.
+  for (const [cat, monthly] of pinnedByCategory) {
+    const entry = categoryMedians.find((c) => c.category === cat);
+    if (entry) entry.monthly += monthly;
+    else categoryMedians.push({ category: cat, monthly });
+  }
+  categoryMedians.sort((a, b) => b.monthly - a.monthly);
   const steadyMonthly = categoryMedians.reduce((s, c) => s + c.monthly, 0);
 
   const anomalies = (catMonths[0]?.all_anomalies || [])
@@ -621,7 +631,7 @@ export async function cashflowProjection() {
     .slice(0, 6)
     .map((a) => ({ merchant: a.merchant, amount: Math.round(a.amount), date: String(a.date).slice(0, 10) }));
 
-  const projectedSpend = recurringTotal + steadyMonthly + pinnedTotal;
+  const projectedSpend = recurringTotal + steadyMonthly;
   const net = expectedIncome - projectedSpend;
 
   return {
@@ -631,12 +641,11 @@ export async function cashflowProjection() {
     incomeStreams: streams,
     projectedSpend,
     recurringTotal,
-    discretionaryRunRate: steadyMonthly + pinnedTotal, // legacy field name for the UI
+    discretionaryRunRate: steadyMonthly, // legacy field name for the UI
     projectionBasis: {
       method: 'per-category median month, last 3 full months, one-offs excluded',
       months: 3,
       categoryMedians, // full list — the panel must reconcile with the total
-      pinnedConstants,
       anomaliesExcluded: anomalies,
     },
     upcomingBills: upcomingBills.slice(0, 12),
