@@ -635,7 +635,7 @@ export async function cashflowProjection() {
     projectionBasis: {
       method: 'per-category median month, last 3 full months, one-offs excluded',
       months: 3,
-      categoryMedians: categoryMedians.slice(0, 8),
+      categoryMedians, // full list — the panel must reconcile with the total
       pinnedConstants,
       anomaliesExcluded: anomalies,
     },
