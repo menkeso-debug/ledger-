@@ -30,6 +30,13 @@ function InsightSkeleton({ widths }: { widths: [string, string, string, string?]
   );
 }
 
+interface CouncilResult {
+  question: string;
+  members: { id: string; name: string; letter: string; answer: string }[];
+  reviews: { reviewer: string; review: string }[];
+  final: string;
+}
+
 export function Insights() {
   const { insights, briefing, dismissInsight, refresh } = useStore();
   const [question, setQuestion] = useState('');
@@ -37,6 +44,26 @@ export function Insights() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [askedQ, setAskedQ] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [council, setCouncil] = useState<CouncilResult | null>(null);
+  const [convening, setConvening] = useState(false);
+  const [openMember, setOpenMember] = useState<string | null>(null);
+
+  const convene = async () => {
+    const text = question.trim();
+    if (!text || convening) return;
+    setConvening(true);
+    setCouncil(null);
+    setAnswer(null);
+    setAskedQ(text);
+    setQuestion('');
+    try {
+      setCouncil(await api.post<CouncilResult>('/api/advisor/council', { question: text }));
+    } catch {
+      setAnswer('The council could not convene — try again.');
+    } finally {
+      setConvening(false);
+    }
+  };
 
   const submit = async (qText?: string) => {
     const text = (qText ?? question).trim();
@@ -93,6 +120,17 @@ export function Insights() {
         >
           {asking ? 'Thinking…' : 'Ask'}
         </span>
+        <span
+          onClick={convene}
+          title="Four advisors answer independently, peer-review each other, and a chairman synthesizes — for big decisions"
+          style={{
+            fontSize: 13, fontWeight: 550, color: 'var(--text)', background: 'var(--surface)',
+            border: '1px solid var(--hairline)', padding: '10px 14px', borderRadius: 11,
+            cursor: 'pointer', opacity: convening ? 0.6 : 1, userSelect: 'none', whiteSpace: 'nowrap',
+          }}
+        >
+          {convening ? 'Deliberating…' : '⚖ Council'}
+        </span>
       </div>
 
       {/* Suggestion chips */}
@@ -110,6 +148,64 @@ export function Insights() {
           </span>
         ))}
       </div>
+
+      {/* Council deliberation */}
+      {convening && (
+        <Panel style={{ borderRadius: 18, padding: '22px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />
+            <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 6, color: 'var(--accent)', background: 'var(--accent-soft)' }}>
+              Council deliberating
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{askedQ}</span>
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+            Four advisors are answering independently, peer-reviewing each other's anonymized answers,
+            and a chairman is synthesizing the verdict. This takes a minute or two.
+          </div>
+          <Sk w="90%" h={13} style={{ marginTop: 14, marginBottom: 8 }} />
+          <Sk w="74%" h={13} style={{ marginBottom: 8 }} />
+          <Sk w="82%" h={13} />
+        </Panel>
+      )}
+      {council && (
+        <Panel style={{ borderRadius: 18, padding: '22px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />
+            <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 6, color: 'var(--accent)', background: 'var(--accent-soft)' }}>
+              Council verdict
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{council.question}</span>
+          </div>
+          <Markdown text={council.final} />
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--hairline-2)' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 8 }}>
+              Individual opinions
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {council.members.map((m) => (
+                <span
+                  key={m.id}
+                  onClick={() => setOpenMember(openMember === m.id ? null : m.id)}
+                  style={{
+                    fontSize: 12.5, fontWeight: 550, padding: '6px 12px', borderRadius: 20, cursor: 'pointer',
+                    color: openMember === m.id ? 'var(--accent)' : 'var(--text-2)',
+                    background: openMember === m.id ? 'var(--accent-soft)' : 'var(--surface-3)',
+                    userSelect: 'none',
+                  }}
+                >
+                  {m.name}
+                </span>
+              ))}
+            </div>
+            {openMember && (
+              <div style={{ marginTop: 12, background: 'var(--surface-2)', border: '1px solid var(--hairline-2)', borderRadius: 12, padding: '14px 16px' }}>
+                <Markdown text={council.members.find((m) => m.id === openMember)!.answer} />
+              </div>
+            )}
+          </div>
+        </Panel>
+      )}
 
       {/* Q&A answer */}
       {(asking || answer) && (

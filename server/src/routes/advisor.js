@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { generateBriefing, latestBriefing } from '../advisor/briefing.js';
 import { ask } from '../advisor/ask.js';
 import { auditCategories } from '../advisor/audit.js';
+import { convene } from '../advisor/council.js';
 
 export const advisorRouter = Router();
 
@@ -20,6 +21,17 @@ advisorRouter.post('/briefing', async (_req, res, next) => {
 advisorRouter.post('/audit-categories', async (_req, res, next) => {
   try {
     res.json(await auditCategories());
+  } catch (err) { next(err); }
+});
+
+// Multi-persona council deliberation for big decisions (9 model calls — slow, thorough).
+advisorRouter.post('/council', async (req, res, next) => {
+  try {
+    const { question } = req.body || {};
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({ error: 'question required' });
+    }
+    res.json(await convene(question));
   } catch (err) { next(err); }
 });
 
