@@ -85,6 +85,11 @@ function CashFlowPanel() {
                   {c.category} {money(c.monthly)}
                 </span>
               ))}
+              {cf.projectionBasis.pinnedConstants?.map((c) => (
+                <span key={c.merchant} className="num" style={{ fontSize: 12, color: 'var(--accent)', background: 'var(--accent-soft)', padding: '4px 10px', borderRadius: 20 }} title="Pinned as a constant cost">
+                  {c.merchant} {money(c.monthly)} · constant
+                </span>
+              ))}
             </div>
           )}
           {cf.upcomingBills.length > 0 && (

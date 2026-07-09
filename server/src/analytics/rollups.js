@@ -533,6 +533,12 @@ export async function cashflowProjection() {
   // never baked in. Bill merchants are excluded here (projected from their own
   // cadence above).
   const recurringMerchants = recurring.filter((r) => r.is_bill).map((r) => r.merchant);
+
+  // User-declared spend nature beats every heuristic.
+  const { rows: flagRows } = await q('SELECT merchant_key, nature FROM merchant_flags');
+  const oneOffKeys = flagRows.filter((f) => f.nature === 'one_off').map((f) => f.merchant_key);
+  const constantKeys = flagRows.filter((f) => f.nature === 'constant').map((f) => f.merchant_key);
+
   const { rows: catMonths } = await q(
     `WITH window_tx AS (
        SELECT t.category, COALESCE(t.merchant_name, t.name) AS merchant,
@@ -542,6 +548,8 @@ export async function cashflowProjection() {
          AND t.date >= (date_trunc('month', CURRENT_DATE) - interval '3 months')::date
          AND t.date < date_trunc('month', CURRENT_DATE)::date
          AND COALESCE(t.merchant_name, t.name) != ALL($1::text[])
+         AND lower(COALESCE(t.merchant_name, t.name)) != ALL($2::text[])
+         AND lower(COALESCE(t.merchant_name, t.name)) != ALL($3::text[])
      ),
      merchant_counts AS (
        SELECT merchant, COUNT(*)::int AS n FROM window_tx GROUP BY merchant
@@ -562,8 +570,23 @@ export async function cashflowProjection() {
              FROM anomalies a) AS all_anomalies
      FROM window_tx w
      GROUP BY w.category, 2`,
-    [recurringMerchants]
+    [recurringMerchants, oneOffKeys, constantKeys]
   );
+
+  // Constant-flagged merchants: averaged over the window regardless of how
+  // irregularly they bill (daycare per term, tuition, etc.).
+  const { rows: constants } = await q(
+    `SELECT COALESCE(t.merchant_name, t.name) AS merchant, (SUM(t.amount) / 3.0)::float AS monthly
+     FROM transactions t
+     WHERE ${SPEND_FILTER}
+       AND t.date >= (date_trunc('month', CURRENT_DATE) - interval '3 months')::date
+       AND t.date < date_trunc('month', CURRENT_DATE)::date
+       AND lower(COALESCE(t.merchant_name, t.name)) = ANY($1::text[])
+     GROUP BY 1`,
+    [constantKeys]
+  );
+  const pinnedConstants = constants.map((c) => ({ merchant: c.merchant, monthly: Math.round(c.monthly) }));
+  const pinnedTotal = pinnedConstants.reduce((s, c) => s + c.monthly, 0);
 
   const byCategory = new Map();
   for (const r of catMonths) {
@@ -585,7 +608,7 @@ export async function cashflowProjection() {
     .slice(0, 6)
     .map((a) => ({ merchant: a.merchant, amount: Math.round(a.amount), date: String(a.date).slice(0, 10) }));
 
-  const projectedSpend = recurringTotal + steadyMonthly;
+  const projectedSpend = recurringTotal + steadyMonthly + pinnedTotal;
   const net = expectedIncome - projectedSpend;
 
   return {
@@ -595,11 +618,12 @@ export async function cashflowProjection() {
     incomeStreams: streams,
     projectedSpend,
     recurringTotal,
-    discretionaryRunRate: steadyMonthly, // legacy field name for the UI
+    discretionaryRunRate: steadyMonthly + pinnedTotal, // legacy field name for the UI
     projectionBasis: {
       method: 'per-category median month, last 3 full months, one-offs excluded',
       months: 3,
       categoryMedians: categoryMedians.slice(0, 8),
+      pinnedConstants,
       anomaliesExcluded: anomalies,
     },
     upcomingBills: upcomingBills.slice(0, 12),

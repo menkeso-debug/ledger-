@@ -101,6 +101,7 @@ export interface CashFlow {
     method: string;
     months: number;
     categoryMedians: { category: string; monthly: number }[];
+    pinnedConstants?: { merchant: string; monthly: number }[];
     anomaliesExcluded: { merchant: string; amount: number; date: string }[];
   };
   upcomingBills: { merchant: string; date: string; amount: number }[];

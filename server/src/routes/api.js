@@ -173,6 +173,29 @@ apiRouter.patch('/transactions/:id/category', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// --- Merchant spend nature (constant vs one-off, used by projection) ---------
+
+apiRouter.put('/merchants/flag', async (req, res, next) => {
+  try {
+    const { merchant, nature } = req.body || {};
+    if (!merchant) return res.status(400).json({ error: 'merchant required' });
+    const key = merchant.trim().toLowerCase();
+    if (nature == null) {
+      await q('DELETE FROM merchant_flags WHERE merchant_key = $1', [key]);
+      return res.json({ ok: true, merchant, nature: null });
+    }
+    if (!['constant', 'one_off'].includes(nature)) {
+      return res.status(400).json({ error: "nature must be 'constant', 'one_off', or null" });
+    }
+    await q(
+      `INSERT INTO merchant_flags (merchant_key, nature) VALUES ($1, $2)
+       ON CONFLICT (merchant_key) DO UPDATE SET nature = EXCLUDED.nature`,
+      [key, nature]
+    );
+    res.json({ ok: true, merchant, nature });
+  } catch (err) { next(err); }
+});
+
 // --- Budgets -------------------------------------------------------------------
 
 apiRouter.get('/budgets', async (_req, res, next) => {

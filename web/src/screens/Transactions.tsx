@@ -19,22 +19,26 @@ const CATEGORY_OPTIONS = [
 function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, sub: string) => void }) {
   const { refresh } = useStore();
   const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [flash, setFlash] = useState(false);
 
   const save = async (cat: string) => {
-    if (!cat || cat === txn.category) return setEditing(false);
-    setSaving(true);
+    setEditing(false);
+    if (!cat || cat === txn.category) return;
+    const prevCat = txn.category;
+    const prevSub = txn.subcategory;
+    const sub = 'Other';
+    // Optimistic: the pill changes the instant you pick — server catches up behind it.
+    onChanged(cat, sub);
+    setFlash(true);
+    setTimeout(() => setFlash(false), 1400);
     try {
-      const sub = cat === txn.category ? (txn.subcategory || 'Other') : 'Other';
       await api.patch(`/api/transactions/${txn.id}/category`, {
         category: cat, subcategory: sub, apply_to_merchant: true,
       });
-      onChanged(cat, sub);
-      // Ripple into Categories / Overview / cash flow without a reload
-      refresh();
-    } finally {
-      setSaving(false);
-      setEditing(false);
+      refresh(); // ripple into Categories / Overview / cash flow, no reload
+    } catch {
+      onChanged(prevCat || 'Other', prevSub || 'Other'); // revert on failure
+      setFlash(false);
     }
   };
 
@@ -55,19 +59,27 @@ function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, s
       </select>
     );
   }
+  // Show the subcategory when it's meaningful, otherwise the category itself —
+  // so a recategorization is always visibly reflected in the pill.
+  const label =
+    txn.subcategory && !['Other', 'Uncategorized'].includes(txn.subcategory)
+      ? txn.subcategory
+      : txn.category || 'Uncategorized';
   return (
     <span
       onClick={() => setEditing(true)}
       title="Click to recategorize (applies to this merchant everywhere)"
       style={{
-        fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-3)', padding: '4px 11px',
-        borderRadius: 20, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer',
-        border: '1px dashed transparent', opacity: saving ? 0.5 : 1,
+        fontSize: 12, padding: '4px 11px', borderRadius: 20, fontWeight: flash ? 600 : 500,
+        whiteSpace: 'nowrap', cursor: 'pointer', border: '1px dashed transparent',
+        color: flash ? 'var(--pos)' : 'var(--text-2)',
+        background: flash ? 'var(--pos-soft)' : 'var(--surface-3)',
+        transition: 'background .35s ease, color .35s ease',
       }}
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--hairline)')}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
     >
-      {saving ? 'Saving…' : (txn.subcategory || txn.category || 'Uncategorized')}
+      {flash ? `${label} ✓` : label}
     </span>
   );
 }
