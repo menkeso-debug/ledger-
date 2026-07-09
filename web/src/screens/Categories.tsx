@@ -124,6 +124,43 @@ function BudgetAdvisor() {
   );
 }
 
+// North-star strip: total spent vs total budget across all categories.
+function TotalBudgetBar() {
+  const { overview, categories } = useStore();
+  const ov = overview.data;
+  if (!ov || overview.status !== 'ready') return null;
+  const budgeted = (categories.data ?? []).filter((c) => c.budget != null);
+  const over = ov.spent.total > ov.spent.budget;
+  const pct = Math.min(100, Math.round((ov.spent.total / ov.spent.budget) * 100));
+  return (
+    <Panel style={{ padding: '18px 24px', marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 15, fontWeight: 600 }}>
+          Total budget
+          <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>
+            {' '}· {budgeted.length} categor{budgeted.length === 1 ? 'y' : 'ies'} budgeted
+          </span>
+        </div>
+        <div className="num" style={{ fontSize: 15, fontWeight: 600 }}>
+          {money(ov.spent.total)}
+          <span style={{ color: 'var(--text-3)', fontWeight: 500 }}> of {money(ov.spent.budget)}</span>
+        </div>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <Bar pct={pct} over={over} height={8} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7, fontSize: 12, color: over ? 'var(--neg)' : 'var(--text-3)' }}>
+          <span>{Math.round((ov.spent.total / ov.spent.budget) * 100)}% used</span>
+          <span className="num">
+            {over
+              ? `${money(ov.spent.total - ov.spent.budget)} over budget`
+              : `${money(ov.spent.budget - ov.spent.total)} left this month`}
+          </span>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 const RESERVED = ['Income', 'Transfer', 'Business', 'Other'];
 
 // Click a category's name to rename it — moves every transaction, budget,
@@ -259,6 +296,7 @@ export function Categories() {
 
   return (
     <div>
+    <TotalBudgetBar />
     <BudgetAdvisor />
     <Panel style={{ overflow: 'hidden' }}>
       {/* Header row */}

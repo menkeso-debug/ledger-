@@ -191,7 +191,7 @@ export function Overview() {
                     padding: '3px 9px', borderRadius: 20,
                   }}
                 >
-                  {ov.netCashChange.amount >= 0 ? '↑' : '↓'} {Math.abs(ov.netCashChange.pct)}%
+                  {ov.netCashChange.amount >= 0 ? '↑' : '↓'} {Math.abs(ov.netCashChange.pct).toLocaleString('en-US')}%
                 </span>
               )}
               {ov && (

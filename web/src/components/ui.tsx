@@ -37,7 +37,7 @@ export function ChangeChip({ pct, invert = false }: { pct: number | null; invert
       className="num"
       style={{ fontSize: 12.5, fontWeight: 600, textAlign: 'right', color, background: bg, padding: '3px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}
     >
-      {up ? '↑' : '↓'} {Math.abs(pct)}%
+      {up ? '↑' : '↓'} {Math.abs(pct).toLocaleString('en-US')}%
     </span>
   );
 }
