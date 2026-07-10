@@ -41,12 +41,14 @@ const MEMBERS = [
   },
 ];
 
-const memberSystem = (m) =>
-  `${ADVISOR_SYSTEM}
-
-You are one member of a financial advisory council: ${m.name}. Your lens: ${m.lens}
+const memberPersona = (m) =>
+  `You are one member of a financial advisory council: ${m.name}. Your lens: ${m.lens}
 Answer the user's question from your lens with concrete numbers from the data. Be direct and take a position — the council synthesizes disagreement, so hedging helps no one. Keep it under 300 words.`;
 
+// `system` is [sharedBlock, roleBlock]: the shared block (advisor framing +
+// data snapshot) is identical across every call of a convene() and carries
+// cache_control, so Claude caches it once and the other ~8 calls read it.
+// OpenAI/Gemini cache identical prefixes automatically for the same reason.
 async function callClaude({ system, prompt, maxTokens = 1500 }) {
   const stream = anthropic().messages.stream({
     model: config.anthropic.model,
@@ -57,6 +59,9 @@ async function callClaude({ system, prompt, maxTokens = 1500 }) {
   const message = await stream.finalMessage();
   return message.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
 }
+
+const systemAsText = (system) =>
+  Array.isArray(system) ? system.map((b) => b.text).join('\n\n') : system;
 
 async function callOpenAI({ system, prompt, maxTokens = 1500 }) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -69,7 +74,7 @@ async function callOpenAI({ system, prompt, maxTokens = 1500 }) {
       model: config.openai.model,
       max_completion_tokens: maxTokens * 4, // reasoning models spend tokens thinking
       messages: [
-        { role: 'system', content: system },
+        { role: 'system', content: systemAsText(system) },
         { role: 'user', content: prompt },
       ],
     }),
@@ -91,7 +96,7 @@ async function callGemini({ system, prompt, maxTokens = 1500 }) {
         'x-goog-api-key': config.gemini.apiKey,
       },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: system }] },
+        system_instruction: { parts: [{ text: systemAsText(system) }] },
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: { maxOutputTokens: maxTokens * 4 },
       }),
@@ -128,13 +133,20 @@ async function callMember(member, args) {
 export async function convene(question) {
   const context = await buildBriefingContext();
   const contextBlock = `Data snapshot (deterministic rollups from real transactions):\n\`\`\`json\n${JSON.stringify(context, null, 1)}\n\`\`\``;
+  // Shared prefix for every call in this convene — cached once, read ~8 times.
+  const sharedBlock = {
+    type: 'text',
+    text: `${ADVISOR_SYSTEM}\n\n${contextBlock}`,
+    cache_control: { type: 'ephemeral' },
+  };
+  const memberSystem = (m) => [sharedBlock, { type: 'text', text: memberPersona(m) }];
 
   // Stage 1 — independent answers, in parallel, each on its own provider
   const answers = await Promise.all(
     MEMBERS.map(async (m) => {
       const r = await callMember(m, {
         system: memberSystem(m),
-        prompt: `${contextBlock}\n\nQuestion: ${question}`,
+        prompt: `Question: ${question}`,
       });
       return { member: m, answer: r.text, providerLabel: r.providerLabel };
     })
@@ -157,12 +169,11 @@ export async function convene(question) {
 
   // Stage 3 — chairman synthesis
   const final = await callClaude({
-    system: `${ADVISOR_SYSTEM}
-
-You are the CHAIRMAN of a financial advisory council. Four members answered independently and then peer-reviewed each other's anonymized answers. Synthesize the strongest final recommendation: lead with the decision/answer, incorporate the best points, resolve or explicitly note disagreements ("the council was split on..."), and end with a short ordered action list. Markdown.`,
+    system: [sharedBlock, {
+      type: 'text',
+      text: `You are the CHAIRMAN of a financial advisory council. Four members answered independently and then peer-reviewed each other's anonymized answers. Synthesize the strongest final recommendation: lead with the decision/answer, incorporate the best points, resolve or explicitly note disagreements ("the council was split on..."), and end with a short ordered action list. Markdown.`,
+    }],
     prompt: `Question: "${question}"
-
-${contextBlock}
 
 Member answers:
 ${answers.map((a, i) => `### ${a.member.name} (Response ${letters[i]})\n${a.answer}`).join('\n\n')}

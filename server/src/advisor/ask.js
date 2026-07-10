@@ -150,9 +150,17 @@ export async function ask(question, history = []) {
     model: config.anthropic.model,
     max_tokens: 4000,
     thinking: { type: 'adaptive' },
-    system: `${ADVISOR_SYSTEM}
+    // cache_control on the system block caches the whole static prefix (tool
+    // schemas + system) across the runner's iterations and follow-up questions.
+    system: [
+      {
+        type: 'text',
+        text: `${ADVISOR_SYSTEM}
 
 Answer the user's question by querying their real data with the tools provided. Query before answering — never estimate what a tool can tell you exactly. Today's date is ${new Date().toISOString().slice(0, 10)}.`,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
     tools,
     messages,
     max_iterations: 12,
