@@ -66,6 +66,9 @@ const DETAILED_MAP = {
   GENERAL_SERVICES_CHILDCARE: ['Kids', 'Childcare'],
   GENERAL_SERVICES_EDUCATION: ['Kids', 'Education'],
 
+  // Card payments — Plaid files them under loans; they're transfers, not loans
+  LOAN_PAYMENTS_CREDIT_CARD_PAYMENT: ['Transfer', 'Card payment'],
+
   // Health
   MEDICAL_PRIMARY_CARE: ['Health', 'Medical'],
   MEDICAL_DENTAL_CARE: ['Health', 'Dental'],
@@ -97,8 +100,9 @@ const PRIMARY_MAP = {
 // Merchant-level overrides applied before PFC mapping. Order matters —
 // first match wins (Whole Foods must precede the generic Amazon rule).
 const MERCHANT_RULES = [
-  // Card-payment descriptors (Chase "Payment Thank You-Mobile/Web", autopay)
-  { match: /payment\s*thank\s*you|thank\s*you[\s-]*(mobile|web)|autopay\s*pmt|automatic payment/i, to: ['Transfer', 'Card payment'] },
+  // Card-payment descriptors: Chase/Amex "Payment Thank You" variants
+  // ("MOBILE PAYMENT - THANK YOU"), ACH payments to card issuers, autopay
+  { match: /payment\s*[-–—]*\s*thank\s*you|thank\s*you[\s-]*(mobile|web)|autopay\s*pmt|automatic payment|american express ach pmt|applecard gsbank/i, to: ['Transfer', 'Card payment'] },
   // HSA/FSA reimbursements (e.g. "ORIG CO NAME:EMPLOYEE BENEFIT CO ENTRY DESCR:EBC")
   { match: /employee benefit/i, to: ['Income', 'HSA / FSA'] },
   { match: /melio/i, to: ['Housing', 'Rent — via Melio'] },
