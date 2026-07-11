@@ -11,7 +11,7 @@ type Filter = 'all' | 'cards' | 'dining' | 'month';
 
 const DEFAULT_CATEGORIES = [
   'Housing', 'Travel', 'Dining', 'Groceries', 'Shopping', 'Subscriptions',
-  'Kids', 'Transport', 'Health', 'Entertainment', 'Business', 'Income', 'Transfer', 'Other',
+  'Kids', 'Transport', 'Health', 'Entertainment', 'Business', 'Income', 'Transfer', 'Refunds', 'Other',
 ];
 const NEW_CATEGORY = '__new__';
 
@@ -56,7 +56,9 @@ function CategoryPill({ txn, onChanged }: { txn: Txn; onChanged: (cat: string, s
     setTimeout(() => setFlash(false), 1400);
     try {
       await api.patch(`/api/transactions/${txn.id}/category`, {
-        category: cat, subcategory: sub, apply_to_merchant: true,
+        // Refunds mark this one transaction only — a merchant rule would flip
+        // the merchant's regular purchases too.
+        category: cat, subcategory: sub, apply_to_merchant: cat !== 'Refunds',
       });
       refresh(); // ripple into Categories / Overview / cash flow, no reload
     } catch {

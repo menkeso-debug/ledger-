@@ -3,7 +3,7 @@ import { q } from '../db/pool.js';
 // All "spend" rollups: outflows (amount > 0), excluding transfers/income/card payments,
 // excluding removed rows. Plaid convention: positive amount = money out.
 
-const SPEND_FILTER = `NOT t.removed AND t.amount > 0 AND t.category NOT IN ('Income','Transfer','Business')`;
+const SPEND_FILTER = `NOT t.removed AND t.amount > 0 AND t.category NOT IN ('Income','Transfer','Business','Refunds')`;
 
 const median = (arr) => {
   const s = [...arr].sort((a, b) => a - b);
@@ -401,7 +401,9 @@ export async function monthlyPnl(months = 6) {
     `WITH m AS (
        SELECT to_char(date_trunc('month', t.date), 'YYYY-MM') AS month,
               COALESCE(SUM(-t.amount) FILTER (WHERE t.amount < 0 AND t.category = 'Income'), 0)::float AS income,
-              COALESCE(SUM(t.amount) FILTER (WHERE t.amount > 0 AND t.category NOT IN ('Income','Transfer','Business')), 0)::float AS spend
+              -- Refund credits reduce spend (money back), rather than counting as income
+              (COALESCE(SUM(t.amount) FILTER (WHERE t.amount > 0 AND t.category NOT IN ('Income','Transfer','Business','Refunds')), 0)
+               - COALESCE(SUM(-t.amount) FILTER (WHERE t.amount < 0 AND t.category = 'Refunds'), 0))::float AS spend
        FROM transactions t
        WHERE NOT t.removed
          AND t.date >= (date_trunc('month', CURRENT_DATE) - make_interval(months => $1))::date

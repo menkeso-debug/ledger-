@@ -272,6 +272,9 @@ apiRouter.patch('/transactions/:id/category', async (req, res, next) => {
     const { category, subcategory, apply_to_merchant = true } = req.body || {};
     if (!category) return res.status(400).json({ error: 'category required' });
     const sub = subcategory || 'Other';
+    // A refund is a property of one transaction, not of the merchant — a rule
+    // would flip the merchant's regular purchases to Refunds too.
+    const applyToMerchant = category === 'Refunds' ? false : apply_to_merchant;
 
     const { rows } = await q(
       `UPDATE transactions SET category = $2, subcategory = $3, updated_at = now()
@@ -281,7 +284,7 @@ apiRouter.patch('/transactions/:id/category', async (req, res, next) => {
     if (!rows.length) return res.status(404).json({ error: 'transaction not found' });
 
     let retro = 0;
-    if (apply_to_merchant) {
+    if (applyToMerchant) {
       const key = rows[0].merchant.trim().toLowerCase();
       await q(
         `INSERT INTO category_overrides (merchant_key, category, subcategory)
@@ -303,7 +306,7 @@ apiRouter.patch('/transactions/:id/category', async (req, res, next) => {
 // --- Category names: list, create, rename -------------------------------------
 // Income/Transfer/Business are load-bearing (excluded from spend math) and
 // Other is the classifier fallback — those four can't be renamed.
-const RESERVED_CATEGORIES = ['Income', 'Transfer', 'Business', 'Other'];
+const RESERVED_CATEGORIES = ['Income', 'Transfer', 'Business', 'Other', 'Refunds'];
 
 apiRouter.get('/category-names', async (_req, res, next) => {
   try {

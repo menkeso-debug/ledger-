@@ -99,6 +99,8 @@ const PRIMARY_MAP = {
 const MERCHANT_RULES = [
   // Card-payment descriptors (Chase "Payment Thank You-Mobile/Web", autopay)
   { match: /payment\s*thank\s*you|thank\s*you[\s-]*(mobile|web)|autopay\s*pmt|automatic payment/i, to: ['Transfer', 'Card payment'] },
+  // HSA/FSA reimbursements (e.g. "ORIG CO NAME:EMPLOYEE BENEFIT CO ENTRY DESCR:EBC")
+  { match: /employee benefit/i, to: ['Income', 'HSA / FSA'] },
   { match: /melio/i, to: ['Housing', 'Rent — via Melio'] },
   { match: /plastiq/i, to: ['Housing', 'Rent — via Plastiq'] },
   { match: /delta air|delta.com/i, to: ['Travel', 'Flights'] },
@@ -136,7 +138,9 @@ export function categorize({ merchantName, name, pfcPrimary, pfcDetailed }, over
 
 // Categories excluded from "spend" rollups (not real outflow spend).
 // Business = resale/inventory purchases the user runs through personal cards.
-export const NON_SPEND_CATEGORIES = ['Income', 'Transfer', 'Business'];
+// Refunds = merchant credits the user marks per-transaction; they reduce
+// spend in the P&L instead of counting as spend or income.
+export const NON_SPEND_CATEGORIES = ['Income', 'Transfer', 'Business', 'Refunds'];
 
 // Card-art tier matcher: maps a Plaid account to one of the six CardTile tiers.
 export function matchTier({ name, officialName, subtype, type }) {
