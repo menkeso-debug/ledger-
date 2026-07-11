@@ -153,7 +153,7 @@ export function Debt() {
         </div>
         {data.cards.map((c) => (
           <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 24px', borderBottom: '1px solid var(--hairline-2)', flexWrap: 'wrap' }}>
-            <CardTile tier={c.tier} height={44} width={70} small />
+            <CardTile tier={c.tier} height={44} width={70} mini />
             <div style={{ flex: 1, minWidth: 140 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>{/^credit card$/i.test(c.name) ? `Card ···${c.mask}` : c.name}</div>
               <TermsCell card={c} onSaved={() => load()} />

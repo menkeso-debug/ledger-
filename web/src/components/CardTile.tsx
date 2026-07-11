@@ -4,12 +4,33 @@ import type { Tier } from '../lib/types';
 
 // Premium metal card art: glow + sheen + tier base gradient, edge inset + emboss.
 export function CardTile({
-  tier, last4, height = 112, width, small = false, issuer, title,
+  tier, last4, height = 112, width, small = false, mini = false, issuer, title,
 }: {
   tier: Tier; last4?: string | null; height?: number; width?: number; small?: boolean;
-  issuer?: string | null; title?: string | null;
+  mini?: boolean; issuer?: string | null; title?: string | null;
 }) {
   const a = TIER_ART[tier] || TIER_ART.other;
+
+  // Badge-size tiles: pure card art (gradient + chip), no room for text.
+  if (mini) {
+    return (
+      <div
+        style={{
+          height, width, borderRadius: 9, position: 'relative', overflow: 'hidden',
+          background: `${a.glow}, ${a.sheen}, ${a.base}`,
+          boxShadow: `${a.edge}, var(--shadow-sm)`, flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute', top: '32%', left: 9, width: 13, height: 9.5, borderRadius: 2.5,
+            background: a.chip,
+            boxShadow: 'inset 0 0 0 0.5px rgba(0,0,0,.1), inset 0 0.5px 0.5px rgba(255,255,255,.4)',
+          }}
+        />
+      </div>
+    );
+  }
   const issuerLabel = issuer || a.issuer;
   const titleLabel = title || a.short;
   const tileStyle: React.CSSProperties = {
